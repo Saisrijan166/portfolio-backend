@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: portfolio-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/portfolio}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8080
+
+jwt:
+  secret: ${JWT_SECRET:4a2s6f8g0h1j3k5l7m9n1b3v5c7x9z1a2s4d6f8g0h2j4k6l8m0n2b4v6c8x0z2}
+  expiration: 86400000 # 24 hours in ms

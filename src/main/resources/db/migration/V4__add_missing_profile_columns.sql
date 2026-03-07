@@ -1,0 +1,7 @@
+-- V4__add_remaining_profile_columns.sql
+ALTER TABLE profiles
+ADD COLUMN IF NOT EXISTS about TEXT,
+ADD COLUMN IF NOT EXISTS os_name VARCHAR(255),
+ADD COLUMN IF NOT EXISTS account_type VARCHAR(255),
+ADD COLUMN IF NOT EXISTS access VARCHAR(255),
+ADD COLUMN IF NOT EXISTS role_description VARCHAR(255);
