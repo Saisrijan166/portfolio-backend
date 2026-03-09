@@ -96,8 +96,8 @@ public class SecurityConfig {
                                 "http://lvh.me:*",
                                 "http://*.lvh.me:*",
 
-                                "https://portfolio-frontend-9vab.vercel.app",
-                                "https://*.vercel.app"));
+                                "https://portfoliooss.vercel.app",
+                                "https://*.portfoliooss.vercel.app"));
 
                 config.setAllowedMethods(List.of(
                                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
