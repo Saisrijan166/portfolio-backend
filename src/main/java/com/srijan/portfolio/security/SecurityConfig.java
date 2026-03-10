@@ -22,6 +22,7 @@ import com.srijan.portfolio.tenant.TenantFilter;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.web.cors.*;
 
+import java.util.Arrays;
 import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -88,21 +89,7 @@ public class SecurityConfig {
 
                 config.setAllowCredentials(true);
 
-                config.setAllowedOriginPatterns(List.of(
-
-                                "http://localhost:*",
-                                "http://*.localhost:*",
-
-                                "http://lvh.me:*",
-                                "http://*.lvh.me:*",
-
-                                "https://portfolioos-preprod.vercel.app",
-                                "https://*.portfolioos-preprod.vercel.app",
-
-                                "https://portfoliooss.vercel.app",
-                                "https://*.portfoliooss.vercel.app"
-                                
-                        ));
+                config.setAllowedOriginPatterns(resolveAllowedOriginPatterns());
 
                 config.setAllowedMethods(List.of(
                                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
@@ -118,6 +105,30 @@ public class SecurityConfig {
                 source.registerCorsConfiguration("/**", config);
 
                 return source;
+        }
+
+        private List<String> resolveAllowedOriginPatterns() {
+                String raw = System.getenv("CORS_ALLOWED_ORIGIN_PATTERNS");
+
+                if (raw == null || raw.isBlank()) {
+                        return List.of(
+
+                                "http://localhost:*",
+                                "http://*.localhost:*",
+
+                                "https://portfolioos-preprod.vercel.app",
+                                "https://*.portfolioos-preprod.vercel.app",
+
+                                "https://portfoliooss.vercel.app",
+                                "https://*.portfoliooss.vercel.app"
+
+                        );
+                }
+
+                return Arrays.stream(raw.split(","))
+                        .map(String::trim)
+                        .filter(value -> !value.isEmpty())
+                        .toList();
         }
 
         @Bean

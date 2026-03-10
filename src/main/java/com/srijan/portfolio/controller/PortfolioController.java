@@ -19,7 +19,7 @@ public class PortfolioController {
     // PUBLIC READ-ONLY ENDPOINT
     // ------------------------------------------------------------------------
     @GetMapping("/api/public/portfolio/{username}")
-    public ResponseEntity<PortfolioResponse> getPublicPortfolio(@PathVariable String username) {
+    public ResponseEntity<PortfolioResponse> getPublicPortfolio(@PathVariable("username") String username) {
         return ResponseEntity.ok(portfolioService.getPortfolioByUsername(username));
     }
 
