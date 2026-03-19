@@ -11,4 +11,10 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     List<Project> findByUserId(Long userId);
 
     List<Project> findByUserIdAndDeletedFalse(Long userId);
+
+    List<Project> findByUserUsernameAndDeletedFalse(String username);
+
+    long countByUserIdAndDeletedFalse(Long userId);
+
+    java.util.Optional<Project> findByIdAndUserUsername(Long id, String username);
 }

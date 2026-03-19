@@ -9,4 +9,8 @@ import java.util.List;
 @Repository
 public interface SkillRepository extends JpaRepository<Skill, Long> {
     List<Skill> findByUserId(Long userId);
+
+    List<Skill> findByUserUsername(String username);
+
+    java.util.Optional<Skill> findByIdAndUserUsername(Long id, String username);
 }

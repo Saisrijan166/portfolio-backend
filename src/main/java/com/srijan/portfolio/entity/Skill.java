@@ -8,7 +8,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "skills")
+@Table(name = "skills", indexes = {
+    @Index(name = "idx_skills_user_id", columnList = "user_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -28,7 +30,7 @@ public class Skill {
     private String domain; // "Frontend Engineering", "Backend & Systems"
 
     private String name; // e.g. "React"
-    private String level; // e.g. "Production-Ready", "Advanced"
+    private int level; // 1=Beginner, 2=Intermediate, 3=Advanced, 4=Expert
 
     private boolean isMetaSkill;
     @Column(length = 1000)

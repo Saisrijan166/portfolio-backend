@@ -1,17 +1,21 @@
 package com.srijan.portfolio.controller;
 
+import com.srijan.portfolio.dto.ApiResponse;
 import com.srijan.portfolio.dto.AuthRequest;
 import com.srijan.portfolio.dto.AuthResponse;
-import com.srijan.portfolio.dto.RegisterRequest;
 import com.srijan.portfolio.dto.RefreshRequest;
 import com.srijan.portfolio.dto.RefreshResponse;
+import com.srijan.portfolio.dto.RegisterRequest;
 import com.srijan.portfolio.service.AuthService;
+import com.srijan.portfolio.util.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@Validated
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
@@ -19,28 +23,20 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(
+    public ResponseEntity<ApiResponse<AuthResponse>> register(
             @Valid @RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(authService.register(request));
+        return ApiResponses.ok(authService.register(request), "Registration successful");
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(
-            @RequestBody AuthRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
+            @Valid @RequestBody AuthRequest request) {
+        return ApiResponses.ok(authService.login(request), "Login successful");
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refreshToken(
-            @RequestBody RefreshRequest request) {
-
-        String accessToken =
-                authService.refreshAccessToken(request.getRefreshToken());
-
-        return ResponseEntity.ok(
-                RefreshResponse.builder()
-                        .accessToken(accessToken)
-                        .build()
-        );
+    public ResponseEntity<ApiResponse<RefreshResponse>> refreshToken(
+            @Valid @RequestBody RefreshRequest request) {
+        return ApiResponses.ok(authService.refreshSession(request.getRefreshToken()), "Token refreshed");
     }
 }

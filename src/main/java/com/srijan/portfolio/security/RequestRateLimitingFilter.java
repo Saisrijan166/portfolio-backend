@@ -1,0 +1,96 @@
+package com.srijan.portfolio.security;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.srijan.portfolio.util.ApiResponses;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+@Component
+@RequiredArgsConstructor
+public class RequestRateLimitingFilter extends OncePerRequestFilter {
+
+    private static final Duration WINDOW = Duration.ofMinutes(1);
+    private static final int AUTH_LIMIT = 20;
+    private static final int PUBLIC_LIMIT = 120;
+    private static final int DEFAULT_LIMIT = 240;
+
+    private final ObjectMapper objectMapper;
+    private final Map<String, WindowCounter> counters = new ConcurrentHashMap<>();
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return "OPTIONS".equalsIgnoreCase(request.getMethod());
+    }
+
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
+        String path = request.getRequestURI();
+        int limit = resolveLimit(path);
+        String key = clientKey(request) + ":" + path;
+
+        WindowCounter counter = counters.compute(key, (ignored, existing) -> existing == null || existing.isExpired()
+                ? new WindowCounter()
+                : existing);
+
+        if (counter.incrementAndGet() > limit) {
+            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            objectMapper.writeValue(response.getWriter(), ApiResponses.error(
+                    "RATE_LIMITED",
+                    "Too many requests. Please try again shortly."
+            ));
+            return;
+        }
+
+        filterChain.doFilter(request, response);
+    }
+
+    private int resolveLimit(String path) {
+        if (path.startsWith("/api/auth/")) {
+            return AUTH_LIMIT;
+        }
+        if (path.startsWith("/api/public/")) {
+            return PUBLIC_LIMIT;
+        }
+        return DEFAULT_LIMIT;
+    }
+
+    private String clientKey(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
+
+    private static final class WindowCounter {
+        private final Instant startedAt = Instant.now();
+        private final AtomicInteger count = new AtomicInteger(0);
+
+        boolean isExpired() {
+            return startedAt.plus(WINDOW).isBefore(Instant.now());
+        }
+
+        int incrementAndGet() {
+            return count.incrementAndGet();
+        }
+    }
+}

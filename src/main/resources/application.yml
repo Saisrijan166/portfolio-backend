@@ -10,8 +10,8 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -22,4 +22,4 @@ server:
 
 jwt:
   secret: ${JWT_SECRET:4a2s6f8g0h1j3k5l7m9n1b3v5c7x9z1a2s4d6f8g0h2j4k6l8m0n2b4v6c8x0z2}
-  expiration: 86400000 # 24 hours in ms
+  accessExpiration: 86400000 # 24 hours in ms

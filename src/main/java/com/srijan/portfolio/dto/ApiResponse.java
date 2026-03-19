@@ -2,18 +2,15 @@ package com.srijan.portfolio.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RefreshResponse {
-
-    private String accessToken;
-
-    private String refreshToken;
+public class ApiResponse<T> {
+    private boolean success;
+    private T data;
+    private String message;
 }

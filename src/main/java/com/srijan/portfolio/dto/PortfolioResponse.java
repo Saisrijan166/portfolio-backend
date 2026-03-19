@@ -20,4 +20,7 @@ public class PortfolioResponse {
     private List<EducationDto> educations;
     private ResumeDto resume;
     private ContactDto contact;
+    // For public bootstrap endpoint
+    private Long projectCount;
+    private Long experienceCount;
 }

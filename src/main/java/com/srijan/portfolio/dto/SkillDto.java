@@ -1,5 +1,9 @@
 package com.srijan.portfolio.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,9 +15,20 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SkillDto {
     private Long id;
+
+    @Size(max = 255)
     private String domain;
+
+    @NotBlank
+    @Size(max = 255)
     private String name;
-    private String level;
+
+    @Min(0)
+    @Max(4)
+    private int level;
+
     private boolean isMetaSkill;
+
+    @Size(max = 1000)
     private String metaDescription;
 }
