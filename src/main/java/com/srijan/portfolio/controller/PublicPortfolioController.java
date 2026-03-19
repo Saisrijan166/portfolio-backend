@@ -45,17 +45,6 @@ public class PublicPortfolioController {
         return data == null ? cachedUserNotFound() : cachedSuccess(data, "Portfolio loaded");
     }
 
-    @GetMapping("/api/public/portfolio/{username}/profile")
-    public ResponseEntity<ApiResponse<ProfileDto>> getPublicProfile(
-            @PathVariable
-            @Pattern(regexp = USERNAME_PATTERN, message = "Username format is invalid")
-            String username) {
-        ProfileDto data = portfolioService.getPublicProfile(username);
-        return data == null && !portfolioService.publicUserExists(username)
-                ? cachedUserNotFound()
-                : cachedSuccess(data, "Profile loaded");
-    }
-
     @GetMapping("/api/public/portfolio/{username}/projects")
     public ResponseEntity<ApiResponse<List<ProjectDto>>> getPublicProjects(
             @PathVariable

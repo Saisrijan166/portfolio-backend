@@ -1,16 +1,19 @@
 package com.srijan.portfolio.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class ProfileDto {
+@AllArgsConstructor
+public class AboutDto {
     @Size(max = 255)
     private String name;
 
@@ -32,24 +35,10 @@ public class ProfileDto {
     @Size(max = 255)
     private String experienceYears;
 
-    @Size(max = 255)
-    private String primaryEmail;
+    @Size(max = 20)
+    private List<String> about;
 
-    @Size(max = 10)
-    private java.util.List<ContactLinkDto> professionalLinks;
-
-    @Size(max = 10)
-    private java.util.List<ContactLinkDto> socialLinks;
-
-    @Size(max = 255)
-    private String osName;
-
-    @Size(max = 255)
-    private String accountType;
-
-    @Size(max = 255)
-    private String access;
-
-    @Size(max = 255)
-    private String roleDescription;
+    @Valid
+    @Size(max = 12)
+    private List<PrincipleDto> principles;
 }

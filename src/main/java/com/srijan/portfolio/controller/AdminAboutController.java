@@ -1,8 +1,8 @@
 package com.srijan.portfolio.controller;
 
+import com.srijan.portfolio.dto.AboutDto;
 import com.srijan.portfolio.dto.ApiResponse;
-import com.srijan.portfolio.dto.ProfileDto;
-import com.srijan.portfolio.service.ProfileService;
+import com.srijan.portfolio.service.AboutService;
 import com.srijan.portfolio.util.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,20 +18,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @Validated
 @RequiredArgsConstructor
-@RequestMapping({"/api/admin/profile", "/api/me/profile"})
-public class AdminProfileController {
+@RequestMapping({"/api/admin/about", "/api/me/about"})
+public class AdminAboutController {
 
-    private final ProfileService profileService;
+    private final AboutService aboutService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<ProfileDto>> getProfile(Authentication auth) {
-        return ApiResponses.ok(profileService.getMyProfile(auth.getName()), "Profile loaded");
+    public ResponseEntity<ApiResponse<AboutDto>> getAbout(Authentication auth) {
+        return ApiResponses.ok(aboutService.getMyAbout(auth.getName()), "About loaded");
     }
 
     @PutMapping
-    public ResponseEntity<ApiResponse<ProfileDto>> updateProfile(
+    public ResponseEntity<ApiResponse<AboutDto>> updateAbout(
             Authentication auth,
-            @Valid @RequestBody ProfileDto dto) {
-        return ApiResponses.ok(profileService.updateProfile(auth.getName(), dto), "Profile updated");
+            @Valid @RequestBody AboutDto dto) {
+        return ApiResponses.ok(aboutService.updateAbout(auth.getName(), dto), "About updated");
     }
 }

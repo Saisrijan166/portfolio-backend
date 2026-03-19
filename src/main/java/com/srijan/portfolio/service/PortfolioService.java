@@ -107,6 +107,17 @@ public class PortfolioService {
     }
 
     @Transactional(readOnly = true)
+    public AboutDto getPublicAbout(String username) {
+        Optional<User> userOptional = findOptionalUserByUsername(username);
+        if (userOptional.isEmpty()) {
+            return null;
+        }
+        User user = userOptional.get();
+        Profile profile = profileRepository.findByUserId(user.getId()).orElse(null);
+        return mapAbout(profile);
+    }
+
+    @Transactional(readOnly = true)
     public List<ProjectDto> getPublicProjects(String username) {
         if (!publicUserExists(username)) {
             return null;
@@ -194,17 +205,34 @@ public class PortfolioService {
         profile.setAccess(sanitize(dto.getAccess()));
         profile.setRoleDescription(sanitize(dto.getRoleDescription()));
 
+        return mapProfile(profileRepository.save(profile));
+    }
+
+    public AboutDto getMyAbout(String username) {
+        User user = findUserByUsername(username);
+        Profile profile = profileRepository.findByUserId(user.getId()).orElse(null);
+        return mapAbout(profile);
+    }
+
+    @Transactional
+    public AboutDto updateAbout(String username, AboutDto dto) {
+        User user = findUserByUsername(username);
+        Profile profile = profileRepository.findByUserId(user.getId())
+                .orElse(new Profile());
+
+        profile.setUser(user);
+
         try {
             profile.setAbout(dto.getAbout() != null
                     ? objectMapper.writeValueAsString(dto.getAbout()) : null);
             profile.setPrinciples(dto.getPrinciples() != null
                     ? objectMapper.writeValueAsString(dto.getPrinciples()) : null);
         } catch (Exception e) {
-            log.error("Failed to serialize profile data", e);
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "PROFILE_SERIALIZATION_FAILED", "Failed to serialize profile data");
+            log.error("Failed to serialize about data", e);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "ABOUT_SERIALIZATION_FAILED", "Failed to serialize about data");
         }
 
-        return mapProfile(profileRepository.save(profile));
+        return mapAbout(profileRepository.save(profile));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -548,6 +576,24 @@ public class PortfolioService {
     private ProfileDto mapProfile(Profile profile) {
         if (profile == null) return null;
 
+        return ProfileDto.builder()
+                .name(profile.getName())
+                .roleTitle(profile.getRoleTitle())
+                .bio(profile.getBio())
+                .image(profile.getImage())
+                .location(profile.getLocation())
+                .availability(profile.getAvailability())
+                .experienceYears(profile.getExperienceYears())
+                .osName(profile.getOsName())
+                .accountType(profile.getAccountType())
+                .access(profile.getAccess())
+                .roleDescription(profile.getRoleDescription())
+                .build();
+    }
+
+    private AboutDto mapAbout(Profile profile) {
+        if (profile == null) return null;
+
         List<String> aboutList = null;
         List<PrincipleDto> principlesList = null;
         try {
@@ -561,18 +607,7 @@ public class PortfolioService {
             log.warn("Failed to parse about/principles", e);
         }
 
-        return ProfileDto.builder()
-                .name(profile.getName())
-                .roleTitle(profile.getRoleTitle())
-                .bio(profile.getBio())
-                .image(profile.getImage())
-                .location(profile.getLocation())
-                .availability(profile.getAvailability())
-                .experienceYears(profile.getExperienceYears())
-                .osName(profile.getOsName())
-                .accountType(profile.getAccountType())
-                .access(profile.getAccess())
-                .roleDescription(profile.getRoleDescription())
+        return AboutDto.builder()
                 .about(aboutList)
                 .principles(principlesList)
                 .build();
