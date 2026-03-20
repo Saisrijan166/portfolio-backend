@@ -1,2 +1,0 @@
-CREATE INDEX IF NOT EXISTS idx_educations_user_deleted ON educations (user_id, deleted);
--- Note: Redundant indexes for profiles, contacts, and resumes (which have unique constraints) have been removed.
