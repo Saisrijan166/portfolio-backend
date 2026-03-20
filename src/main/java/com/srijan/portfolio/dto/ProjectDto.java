@@ -21,15 +21,12 @@ public class ProjectDto {
     @Size(max = 255)
     private String name;
 
-    @NotBlank
     @Size(max = 255)
     private String type;
 
-    @NotBlank
     @Size(max = 255)
     private String status;
 
-    @NotBlank
     @Size(max = 255)
     private String year;
 
