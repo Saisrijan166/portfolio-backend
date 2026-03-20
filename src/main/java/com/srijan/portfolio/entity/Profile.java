@@ -25,6 +25,7 @@ public class Profile {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    // Legacy shared fields retained for backwards-compatible reads.
     private String name;
     private String roleTitle;
 
@@ -45,6 +46,30 @@ public class Profile {
 
     @Column(columnDefinition = "TEXT")
     private String principles; // Store as JSON array of principles
+
+    // About module fields
+    private String aboutName;
+    private String aboutRoleTitle;
+
+    @Column(length = 2000)
+    private String aboutBio;
+    private String aboutImage;
+    private String aboutLocation;
+    private String aboutAvailability;
+    private String aboutExperienceYears;
+
+    // Profile module fields
+    private String profileName;
+    private String profileRoleTitle;
+    private String profileLocation;
+    private String profileAvailability;
+    private String profilePrimaryEmail;
+
+    @Column(columnDefinition = "TEXT")
+    private String profileProfessionalLinks;
+
+    @Column(columnDefinition = "TEXT")
+    private String profileSocialLinks;
 
     @CreationTimestamp
     @Column(updatable = false)

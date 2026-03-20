@@ -1,21 +1,27 @@
 package com.srijan.portfolio.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srijan.portfolio.dto.ContactLinkDto;
 import com.srijan.portfolio.dto.ProfileDto;
 import com.srijan.portfolio.entity.Contact;
 import com.srijan.portfolio.entity.Profile;
 import com.srijan.portfolio.entity.User;
+import com.srijan.portfolio.exception.ApiException;
 import com.srijan.portfolio.exception.ResourceNotFoundException;
 import com.srijan.portfolio.repository.ContactRepository;
 import com.srijan.portfolio.repository.ProfileRepository;
 import com.srijan.portfolio.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProfileService {
@@ -23,6 +29,7 @@ public class ProfileService {
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
     private final ContactRepository contactRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
     public ProfileDto getPublicProfile(String username) {
@@ -53,25 +60,16 @@ public class ProfileService {
 
         profile.setUser(user);
         if (dto.getName() != null) {
-            profile.setName(sanitize(dto.getName()));
+            profile.setProfileName(sanitize(dto.getName()));
         }
         if (dto.getRoleTitle() != null) {
-            profile.setRoleTitle(sanitize(dto.getRoleTitle()));
-        }
-        if (dto.getBio() != null) {
-            profile.setBio(sanitize(dto.getBio()));
-        }
-        if (dto.getImage() != null) {
-            profile.setImage(sanitize(dto.getImage()));
-        }
-        if (dto.getExperienceYears() != null) {
-            profile.setExperienceYears(sanitize(dto.getExperienceYears()));
+            profile.setProfileRoleTitle(sanitize(dto.getRoleTitle()));
         }
         if (dto.getLocation() != null) {
-            profile.setLocation(sanitize(dto.getLocation()));
+            profile.setProfileLocation(sanitize(dto.getLocation()));
         }
         if (dto.getAvailability() != null) {
-            profile.setAvailability(sanitize(dto.getAvailability()));
+            profile.setProfileAvailability(sanitize(dto.getAvailability()));
         }
         if (dto.getOsName() != null) {
             profile.setOsName(sanitize(dto.getOsName()));
@@ -84,6 +82,15 @@ public class ProfileService {
         }
         if (dto.getRoleDescription() != null) {
             profile.setRoleDescription(sanitize(dto.getRoleDescription()));
+        }
+        if (dto.getPrimaryEmail() != null) {
+            profile.setProfilePrimaryEmail(sanitize(dto.getPrimaryEmail()));
+        }
+        if (dto.getProfessionalLinks() != null) {
+            profile.setProfileProfessionalLinks(writeLinks(dto.getProfessionalLinks()));
+        }
+        if (dto.getSocialLinks() != null) {
+            profile.setProfileSocialLinks(writeLinks(dto.getSocialLinks()));
         }
 
         Profile saved = profileRepository.save(profile);
@@ -100,44 +107,95 @@ public class ProfileService {
         return value == null ? null : value.trim();
     }
 
+    private String firstNonBlank(String primary, String fallback) {
+        if (primary != null && !primary.isBlank()) {
+            return primary;
+        }
+        if (fallback != null && !fallback.isBlank()) {
+            return fallback;
+        }
+        return null;
+    }
+
+    private boolean hasProfileOwnedContacts(Profile profile) {
+        return profile != null && (
+                hasText(profile.getProfilePrimaryEmail())
+                        || hasText(profile.getProfileProfessionalLinks())
+                        || hasText(profile.getProfileSocialLinks())
+        );
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String writeLinks(List<ContactLinkDto> links) {
+        try {
+            return objectMapper.writeValueAsString(links);
+        } catch (Exception exception) {
+            log.error("Failed to serialize profile contact links", exception);
+            throw new ApiException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "PROFILE_CONTACT_SERIALIZATION_FAILED",
+                    "Failed to serialize profile contact links"
+            );
+        }
+    }
+
+    private List<ContactLinkDto> readLinks(String json) {
+        if (!hasText(json)) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<ContactLinkDto>>() {});
+        } catch (Exception exception) {
+            log.warn("Failed to parse profile contact links", exception);
+            return List.of();
+        }
+    }
+
     private ProfileDto mapProfile(Profile profile, Contact contact) {
         if (profile == null && contact == null) {
             return null;
         }
 
-        List<ContactLinkDto> professionalLinks = contact != null && contact.getProfessionalLinks() != null
-                ? contact.getProfessionalLinks().stream()
-                .map(link -> ContactLinkDto.builder()
-                        .label(link.getLabel())
-                        .url(link.getUrl())
-                        .build())
-                .toList()
-                : List.of();
+        boolean useProfileOwnedContacts = hasProfileOwnedContacts(profile);
+        List<ContactLinkDto> professionalLinks = useProfileOwnedContacts
+                ? readLinks(profile.getProfileProfessionalLinks())
+                : mapGlobalLinks(contact != null ? contact.getProfessionalLinks() : null);
 
-        List<ContactLinkDto> socialLinks = contact != null && contact.getSocialLinks() != null
-                ? contact.getSocialLinks().stream()
-                .map(link -> ContactLinkDto.builder()
-                        .label(link.getLabel())
-                        .url(link.getUrl())
-                        .build())
-                .toList()
-                : List.of();
+        List<ContactLinkDto> socialLinks = useProfileOwnedContacts
+                ? readLinks(profile.getProfileSocialLinks())
+                : mapGlobalLinks(contact != null ? contact.getSocialLinks() : null);
+
+        String primaryEmail = useProfileOwnedContacts
+                ? firstNonBlank(profile.getProfilePrimaryEmail(), null)
+                : contact != null ? contact.getPrimaryEmail() : null;
 
         return ProfileDto.builder()
-                .name(profile != null ? profile.getName() : null)
-                .roleTitle(profile != null ? profile.getRoleTitle() : null)
-                .bio(profile != null ? profile.getBio() : null)
-                .image(profile != null ? profile.getImage() : null)
-                .location(profile != null ? profile.getLocation() : null)
-                .availability(profile != null ? profile.getAvailability() : null)
-                .experienceYears(profile != null ? profile.getExperienceYears() : null)
+                .name(profile != null ? firstNonBlank(profile.getProfileName(), profile.getName()) : null)
+                .roleTitle(profile != null ? firstNonBlank(profile.getProfileRoleTitle(), profile.getRoleTitle()) : null)
+                .location(profile != null ? firstNonBlank(profile.getProfileLocation(), profile.getLocation()) : null)
+                .availability(profile != null ? firstNonBlank(profile.getProfileAvailability(), profile.getAvailability()) : null)
                 .osName(profile != null ? profile.getOsName() : null)
                 .accountType(profile != null ? profile.getAccountType() : null)
                 .access(profile != null ? profile.getAccess() : null)
                 .roleDescription(profile != null ? profile.getRoleDescription() : null)
-                .primaryEmail(contact != null ? contact.getPrimaryEmail() : null)
+                .primaryEmail(primaryEmail)
                 .professionalLinks(professionalLinks)
                 .socialLinks(socialLinks)
                 .build();
+    }
+
+    private List<ContactLinkDto> mapGlobalLinks(List<com.srijan.portfolio.entity.ContactLink> links) {
+        if (links == null) {
+            return List.of();
+        }
+        return links.stream()
+                .map(link -> ContactLinkDto.builder()
+                        .label(link.getLabel())
+                        .url(link.getUrl())
+                        .build())
+                .toList();
     }
 }

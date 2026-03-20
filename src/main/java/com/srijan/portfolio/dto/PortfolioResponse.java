@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 public class PortfolioResponse {
     private String username;
-    private ProfileDto profile;
+    private PortfolioIdentityDto profile;
     private List<ProjectDto> projects;
     private List<ExperienceDto> experiences;
     private List<SkillDto> skills;

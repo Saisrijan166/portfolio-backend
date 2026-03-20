@@ -51,25 +51,25 @@ public class AboutService {
 
         profile.setUser(user);
         if (dto.getName() != null) {
-            profile.setName(sanitize(dto.getName()));
+            profile.setAboutName(sanitize(dto.getName()));
         }
         if (dto.getRoleTitle() != null) {
-            profile.setRoleTitle(sanitize(dto.getRoleTitle()));
+            profile.setAboutRoleTitle(sanitize(dto.getRoleTitle()));
         }
         if (dto.getBio() != null) {
-            profile.setBio(sanitize(dto.getBio()));
+            profile.setAboutBio(sanitize(dto.getBio()));
         }
         if (dto.getImage() != null) {
-            profile.setImage(sanitize(dto.getImage()));
+            profile.setAboutImage(sanitize(dto.getImage()));
         }
         if (dto.getLocation() != null) {
-            profile.setLocation(sanitize(dto.getLocation()));
+            profile.setAboutLocation(sanitize(dto.getLocation()));
         }
         if (dto.getAvailability() != null) {
-            profile.setAvailability(sanitize(dto.getAvailability()));
+            profile.setAboutAvailability(sanitize(dto.getAvailability()));
         }
         if (dto.getExperienceYears() != null) {
-            profile.setExperienceYears(sanitize(dto.getExperienceYears()));
+            profile.setAboutExperienceYears(sanitize(dto.getExperienceYears()));
         }
 
         try {
@@ -126,15 +126,25 @@ public class AboutService {
         }
 
         return AboutDto.builder()
-                .name(profile.getName())
-                .roleTitle(profile.getRoleTitle())
-                .bio(profile.getBio())
-                .image(profile.getImage())
-                .location(profile.getLocation())
-                .availability(profile.getAvailability())
-                .experienceYears(profile.getExperienceYears())
+                .name(firstNonBlank(profile.getAboutName(), profile.getName()))
+                .roleTitle(firstNonBlank(profile.getAboutRoleTitle(), profile.getRoleTitle()))
+                .bio(firstNonBlank(profile.getAboutBio(), profile.getBio()))
+                .image(firstNonBlank(profile.getAboutImage(), profile.getImage()))
+                .location(firstNonBlank(profile.getAboutLocation(), profile.getLocation()))
+                .availability(firstNonBlank(profile.getAboutAvailability(), profile.getAvailability()))
+                .experienceYears(firstNonBlank(profile.getAboutExperienceYears(), profile.getExperienceYears()))
                 .about(aboutList)
                 .principles(principlesList)
                 .build();
+    }
+
+    private String firstNonBlank(String primary, String fallback) {
+        if (primary != null && !primary.isBlank()) {
+            return primary;
+        }
+        if (fallback != null && !fallback.isBlank()) {
+            return fallback;
+        }
+        return null;
     }
 }

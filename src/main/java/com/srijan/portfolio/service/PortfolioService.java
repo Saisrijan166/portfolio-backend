@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Year;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -44,13 +45,13 @@ public class PortfolioService {
 
     private List<String> sanitizeList(List<String> values) {
         if (values == null) {
-            return Collections.emptyList();
+            return new ArrayList<>();
         }
         return values.stream()
                 .map(this::sanitize)
                 .filter(value -> value != null && !value.isBlank())
                 .distinct()
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private Optional<User> findOptionalUserByUsername(String username) {
@@ -85,7 +86,7 @@ public class PortfolioService {
 
         return PortfolioResponse.builder()
                 .username(user.getUsername())
-                .profile(mapProfile(profile))
+                .profile(mapPortfolioIdentity(profile))
                 .projectCount(projectCount)
                 .experienceCount(professionalExperienceCount)
                 .build();
@@ -103,7 +104,7 @@ public class PortfolioService {
         }
         User user = userOptional.get();
         Profile profile = profileRepository.findByUserId(user.getId()).orElse(null);
-        return mapProfile(profile);
+        return mapLegacyProfile(profile);
     }
 
     @Transactional(readOnly = true)
@@ -182,7 +183,7 @@ public class PortfolioService {
     public ProfileDto getMyProfile(String username) {
         User user = findUserByUsername(username);
         Profile profile = profileRepository.findByUserId(user.getId()).orElse(null);
-        return mapProfile(profile);
+        return mapLegacyProfile(profile);
     }
 
     @Transactional
@@ -193,19 +194,16 @@ public class PortfolioService {
                 .orElse(new Profile());
 
         profile.setUser(user);
-        profile.setName(sanitize(dto.getName()));
-        profile.setRoleTitle(sanitize(dto.getRoleTitle()));
-        profile.setBio(sanitize(dto.getBio()));
-        profile.setImage(sanitize(dto.getImage()));
-        profile.setLocation(sanitize(dto.getLocation()));
-        profile.setAvailability(sanitize(dto.getAvailability()));
-        profile.setExperienceYears(sanitize(dto.getExperienceYears()));
+        profile.setProfileName(sanitize(dto.getName()));
+        profile.setProfileRoleTitle(sanitize(dto.getRoleTitle()));
+        profile.setProfileLocation(sanitize(dto.getLocation()));
+        profile.setProfileAvailability(sanitize(dto.getAvailability()));
         profile.setOsName(sanitize(dto.getOsName()));
         profile.setAccountType(sanitize(dto.getAccountType()));
         profile.setAccess(sanitize(dto.getAccess()));
         profile.setRoleDescription(sanitize(dto.getRoleDescription()));
 
-        return mapProfile(profileRepository.save(profile));
+        return mapLegacyProfile(profileRepository.save(profile));
     }
 
     public AboutDto getMyAbout(String username) {
@@ -479,7 +477,7 @@ public class PortfolioService {
                                 .url(sanitize(l.getUrl()))
                                 .build())
                         .collect(Collectors.toList())
-                : List.of();
+                : new ArrayList<>();
         contact.setProfessionalLinks(professional);
 
         List<ContactLink> social = dto.getSocialLinks() != null
@@ -489,7 +487,7 @@ public class PortfolioService {
                                 .url(sanitize(l.getUrl()))
                                 .build())
                         .collect(Collectors.toList())
-                : List.of();
+                : new ArrayList<>();
         contact.setSocialLinks(social);
 
         return mapContact(contactRepository.save(contact));
@@ -513,7 +511,7 @@ public class PortfolioService {
 
         return PortfolioResponse.builder()
                 .username(user.getUsername())
-                .profile(mapProfile(profile))
+                .profile(mapPortfolioIdentity(profile))
                 .projects(projects.stream().map(this::mapProject).collect(Collectors.toList()))
                 .experiences(experiences.stream().map(this::mapExperience).collect(Collectors.toList()))
                 .skills(skills.stream().map(this::mapSkill).collect(Collectors.toList()))
@@ -573,17 +571,23 @@ public class PortfolioService {
     // MAPPERS
     // ─────────────────────────────────────────────────────────────────────────
 
-    private ProfileDto mapProfile(Profile profile) {
+    private PortfolioIdentityDto mapPortfolioIdentity(Profile profile) {
+        if (profile == null) return null;
+
+        return PortfolioIdentityDto.builder()
+                .name(firstNonBlank(profile.getAboutName(), profile.getName()))
+                .image(firstNonBlank(profile.getAboutImage(), profile.getImage()))
+                .build();
+    }
+
+    private ProfileDto mapLegacyProfile(Profile profile) {
         if (profile == null) return null;
 
         return ProfileDto.builder()
-                .name(profile.getName())
-                .roleTitle(profile.getRoleTitle())
-                .bio(profile.getBio())
-                .image(profile.getImage())
-                .location(profile.getLocation())
-                .availability(profile.getAvailability())
-                .experienceYears(profile.getExperienceYears())
+                .name(firstNonBlank(profile.getProfileName(), profile.getName()))
+                .roleTitle(firstNonBlank(profile.getProfileRoleTitle(), profile.getRoleTitle()))
+                .location(firstNonBlank(profile.getProfileLocation(), profile.getLocation()))
+                .availability(firstNonBlank(profile.getProfileAvailability(), profile.getAvailability()))
                 .osName(profile.getOsName())
                 .accountType(profile.getAccountType())
                 .access(profile.getAccess())
@@ -608,9 +612,26 @@ public class PortfolioService {
         }
 
         return AboutDto.builder()
+                .name(firstNonBlank(profile.getAboutName(), profile.getName()))
+                .roleTitle(firstNonBlank(profile.getAboutRoleTitle(), profile.getRoleTitle()))
+                .bio(firstNonBlank(profile.getAboutBio(), profile.getBio()))
+                .image(firstNonBlank(profile.getAboutImage(), profile.getImage()))
+                .location(firstNonBlank(profile.getAboutLocation(), profile.getLocation()))
+                .availability(firstNonBlank(profile.getAboutAvailability(), profile.getAvailability()))
+                .experienceYears(firstNonBlank(profile.getAboutExperienceYears(), profile.getExperienceYears()))
                 .about(aboutList)
                 .principles(principlesList)
                 .build();
+    }
+
+    private String firstNonBlank(String primary, String fallback) {
+        if (primary != null && !primary.isBlank()) {
+            return primary;
+        }
+        if (fallback != null && !fallback.isBlank()) {
+            return fallback;
+        }
+        return null;
     }
 
     ProjectDto mapProject(Project project) {
