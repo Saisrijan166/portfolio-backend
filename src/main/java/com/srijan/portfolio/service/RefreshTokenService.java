@@ -25,6 +25,11 @@ public class RefreshTokenService {
         return createRefreshToken(user);
     }
 
+    @Transactional
+    public void revokeAllForUser(Long userId) {
+        repository.deleteByUserId(userId);
+    }
+
     public RefreshToken createRefreshToken(User user) {
         RefreshToken token = RefreshToken.builder()
                 .user(user)

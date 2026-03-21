@@ -17,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -29,16 +31,19 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
+        String normalizedUsername = normalizeUsername(request.getUsername());
+        String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
+
+        if (userRepository.existsByUsernameIgnoreCase(normalizedUsername)) {
             throw new ConflictException("USERNAME_ALREADY_EXISTS", "Username is already taken");
         }
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(normalizedEmail)) {
             throw new ConflictException("EMAIL_ALREADY_EXISTS", "Email is already in use");
         }
 
         User user = User.builder()
-                .username(request.getUsername().trim())
-                .email(request.getEmail().trim().toLowerCase())
+                .username(normalizedUsername)
+                .email(normalizedEmail)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role("ROLE_USER")
                 .build();
@@ -49,10 +54,12 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(AuthRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+        String normalizedUsername = normalizeUsername(request.getUsername());
 
-        User user = userRepository.findByUsername(request.getUsername())
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(normalizedUsername, request.getPassword()));
+
+        User user = userRepository.findByUsername(normalizedUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return buildAuthResponse(user, refreshTokenService.rotateRefreshToken(user));
@@ -80,5 +87,9 @@ public class AuthService {
                 .username(user.getUsername())
                 .userId(user.getId())
                 .build();
+    }
+
+    private String normalizeUsername(String username) {
+        return username.trim().toLowerCase(Locale.ROOT);
     }
 }
