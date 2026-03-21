@@ -17,18 +17,26 @@ import java.util.List;
 public class ExperienceDto {
     private Long id;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String company;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String roleTitle;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String duration;
+
+    @Min(1)
+    @Max(12)
+    private Integer startMonth;
 
     @Min(1950)
     @Max(2100)
     private Integer startYear;
+
+    @Min(1)
+    @Max(12)
+    private Integer endMonth;
 
     @Min(1950)
     @Max(2100)
@@ -37,31 +45,31 @@ public class ExperienceDto {
     private boolean isCurrent;
 
     @Size(max = 20)
-    private List<String> responsibilities;
+    private List<@Size(max = 255) String> responsibilities;
 
     @Size(max = 20)
-    private List<String> achievements;
+    private List<@Size(max = 255) String> achievements;
 
     @Size(max = 20)
-    private List<String> skills;
+    private List<@Size(max = 255) String> skills;
 
     private boolean isAcademic;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String level;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String institute;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String location;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String degree;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String scoreLabel;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String scoreValue;
 }

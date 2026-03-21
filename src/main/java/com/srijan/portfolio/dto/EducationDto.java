@@ -15,30 +15,28 @@ public class EducationDto {
     private Long id;
 
     @NotBlank
-    @Size(max = 255)
+    @Size(max = 100)
     private String level;
 
     @NotBlank
-    @Size(max = 255)
+    @Size(max = 100)
     private String institute;
 
     @NotBlank
-    @Size(max = 255)
+    @Size(max = 100)
     private String location;
 
     @NotBlank
-    @Size(max = 255)
+    @Size(max = 100)
     private String degree;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String scoreLabel;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String scoreValue;
 
     @NotBlank
-    @Size(max = 255)
+    @Size(max = 100)
     private String duration;
-
-    private boolean deleted;
 }

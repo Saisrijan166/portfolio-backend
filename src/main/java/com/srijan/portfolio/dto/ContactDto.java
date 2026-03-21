@@ -18,6 +18,7 @@ import java.util.List;
 public class ContactDto {
     @NotBlank
     @Email
+    @Size(max = 255)
     private String primaryEmail;
 
     @Valid

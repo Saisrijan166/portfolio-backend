@@ -10,8 +10,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "projects", indexes = {
-    @Index(name = "idx_projects_user_id", columnList = "user_id"),
-    @Index(name = "idx_projects_user_deleted", columnList = "user_id,deleted")
+    @Index(name = "idx_projects_user_id", columnList = "user_id")
 })
 @Getter
 @Setter
@@ -29,38 +28,47 @@ public class Project {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(length = 100)
     private String name;
+
+    @Column(length = 100)
     private String type; // e.g., "System Application"
+
+    @Column(length = 100)
     private String status;
+
+    @Column(length = 100)
     private String year;
 
-    @Column(length = 2000)
+    @Column(length = 3000)
     private String overview;
 
     // Storing tags/arrays as ElementCollections for simplicity
     @ElementCollection
     @CollectionTable(name = "project_tech_stacks", joinColumns = @JoinColumn(name = "project_id"))
-    @Column(name = "tech")
+    @Column(name = "tech", length = 255)
     private List<String> techStack;
 
     // Links (live, source, pdf)
+    @Column(length = 512)
     private String liveLink;
+
+    @Column(length = 512)
     private String sourceLink;
+
+    @Column(length = 512)
     private String pdfLink;
 
     // Media
+    @Column(length = 512)
     private String mediaVideo;
 
     @ElementCollection
     @CollectionTable(name = "project_screenshots", joinColumns = @JoinColumn(name = "project_id"))
-    @Column(name = "screenshot_url")
+    @Column(name = "screenshot_url", length = 512)
     private List<String> screenshots;
 
     private boolean isResearch; // Flag to separate generic projects from research papers
-
-    @Builder.Default
-    @Column(nullable = false)
-    private boolean deleted = false;
 
     @CreationTimestamp
     @Column(updatable = false)

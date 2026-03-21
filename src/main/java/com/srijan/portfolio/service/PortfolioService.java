@@ -7,16 +7,18 @@ import com.srijan.portfolio.exception.ResourceNotFoundException;
 import com.srijan.portfolio.repository.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Month;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -27,6 +29,7 @@ public class PortfolioService {
 
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
+    private final AboutRepository aboutRepository;
     private final ProjectRepository projectRepository;
     private final ExperienceRepository experienceRepository;
     private final SkillRepository skillRepository;
@@ -81,12 +84,13 @@ public class PortfolioService {
         Long userId = user.getId();
 
         Profile profile = profileRepository.findByUserId(userId).orElse(null);
-        long projectCount = projectRepository.countByUserIdAndDeletedFalse(userId);
+        About about = aboutRepository.findByUserId(userId).orElse(null);
+        long projectCount = projectRepository.countByUserId(userId);
         long professionalExperienceCount = experienceRepository.countProfessionalByUserId(userId);
 
         return PortfolioResponse.builder()
                 .username(user.getUsername())
-                .profile(mapPortfolioIdentity(profile))
+                .profile(mapPortfolioIdentity(profile, about))
                 .projectCount(projectCount)
                 .experienceCount(professionalExperienceCount)
                 .build();
@@ -114,8 +118,8 @@ public class PortfolioService {
             return null;
         }
         User user = userOptional.get();
-        Profile profile = profileRepository.findByUserId(user.getId()).orElse(null);
-        return mapAbout(profile);
+        About about = aboutRepository.findByUserId(user.getId()).orElse(null);
+        return mapAbout(about);
     }
 
     @Transactional(readOnly = true)
@@ -123,7 +127,7 @@ public class PortfolioService {
         if (!publicUserExists(username)) {
             return null;
         }
-        return projectRepository.findByUserUsernameAndDeletedFalse(sanitize(username))
+        return projectRepository.findByUserUsername(sanitize(username))
                 .stream().map(this::mapProject).collect(Collectors.toList());
     }
 
@@ -132,7 +136,7 @@ public class PortfolioService {
         if (!publicUserExists(username)) {
             return null;
         }
-        return experienceRepository.findByUserUsernameAndDeletedFalse(sanitize(username))
+        return experienceRepository.findByUserUsername(sanitize(username))
                 .stream().map(this::mapExperience).collect(Collectors.toList());
     }
 
@@ -150,7 +154,7 @@ public class PortfolioService {
         if (!publicUserExists(username)) {
             return null;
         }
-        return educationRepository.findByUserUsernameAndDeletedFalse(sanitize(username))
+        return educationRepository.findByUserUsername(sanitize(username))
                 .stream().map(this::mapEducation).collect(Collectors.toList());
     }
 
@@ -208,29 +212,12 @@ public class PortfolioService {
 
     public AboutDto getMyAbout(String username) {
         User user = findUserByUsername(username);
-        Profile profile = profileRepository.findByUserId(user.getId()).orElse(null);
-        return mapAbout(profile);
+        return mapAbout(aboutRepository.findByUserId(user.getId()).orElse(null));
     }
 
     @Transactional
     public AboutDto updateAbout(String username, AboutDto dto) {
-        User user = findUserByUsername(username);
-        Profile profile = profileRepository.findByUserId(user.getId())
-                .orElse(new Profile());
-
-        profile.setUser(user);
-
-        try {
-            profile.setAbout(dto.getAbout() != null
-                    ? objectMapper.writeValueAsString(dto.getAbout()) : null);
-            profile.setPrinciples(dto.getPrinciples() != null
-                    ? objectMapper.writeValueAsString(dto.getPrinciples()) : null);
-        } catch (Exception e) {
-            log.error("Failed to serialize about data", e);
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "ABOUT_SERIALIZATION_FAILED", "Failed to serialize about data");
-        }
-
-        return mapAbout(profileRepository.save(profile));
+        throw new UnsupportedOperationException("Use AboutService for about updates");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -239,7 +226,7 @@ public class PortfolioService {
 
     public List<ProjectDto> getMyProjects(String username) {
         findUserByUsername(username);
-        return projectRepository.findByUserUsernameAndDeletedFalse(username)
+        return projectRepository.findByUserUsername(username)
                 .stream().map(this::mapProject).collect(Collectors.toList());
     }
 
@@ -261,8 +248,7 @@ public class PortfolioService {
     public void deleteProject(String username, Long id) {
         Project p = projectRepository.findByIdAndUserUsername(id, username)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-        p.setDeleted(true);
-        projectRepository.save(p);
+        projectRepository.delete(p);
     }
 
     private Project buildProject(Project p, User user, ProjectDto dto) {
@@ -279,7 +265,6 @@ public class PortfolioService {
         p.setMediaVideo(sanitize(dto.getMediaVideo()));
         p.setScreenshots(sanitizeList(dto.getScreenshots()));
         p.setResearch(dto.isResearch());
-        p.setDeleted(false);
         return p;
     }
 
@@ -289,7 +274,7 @@ public class PortfolioService {
 
     public List<ExperienceDto> getMyExperience(String username) {
         findUserByUsername(username);
-        return experienceRepository.findByUserUsernameAndDeletedFalse(username)
+        return experienceRepository.findByUserUsername(username)
                 .stream().map(this::mapExperience).collect(Collectors.toList());
     }
 
@@ -311,26 +296,25 @@ public class PortfolioService {
     public void deleteExperience(String username, Long id) {
         Experience e = experienceRepository.findByIdAndUserUsername(id, username)
                 .orElseThrow(() -> new ResourceNotFoundException("Experience not found"));
-        e.setDeleted(true);
-        experienceRepository.save(e);
+        experienceRepository.delete(e);
     }
 
     private Experience buildExperience(Experience e, User user, ExperienceDto dto) {
         Integer currentYear = Year.now().getValue();
-        if (dto.getStartYear() != null && dto.getEndYear() != null && dto.getStartYear() > dto.getEndYear() && !dto.isCurrent()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EXPERIENCE_RANGE", "Start year must be before or equal to end year");
-        }
-        if (dto.getStartYear() != null && dto.getStartYear() > currentYear + 1) {
+        ExperiencePeriod period = normalizeExperiencePeriod(dto);
+        if (period.startYear() > currentYear + 1) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EXPERIENCE_RANGE", "Start year is not valid");
         }
 
         e.setUser(user);
         e.setCompany(sanitize(dto.getCompany()));
         e.setRoleTitle(sanitize(dto.getRoleTitle()));
-        e.setDuration(sanitize(dto.getDuration()));
-        e.setStartYear(dto.getStartYear());
-        e.setEndYear(dto.getEndYear());
-        e.setCurrent(dto.isCurrent());
+        e.setDuration(period.duration());
+        e.setStartMonth(period.startMonth());
+        e.setStartYear(period.startYear());
+        e.setEndMonth(period.endMonth());
+        e.setEndYear(period.endYear());
+        e.setCurrent(period.current());
         e.setResponsibilities(sanitizeList(dto.getResponsibilities()));
         e.setAchievements(sanitizeList(dto.getAchievements()));
         e.setSkills(sanitizeList(dto.getSkills()));
@@ -341,7 +325,6 @@ public class PortfolioService {
         e.setDegree(sanitize(dto.getDegree()));
         e.setScoreLabel(sanitize(dto.getScoreLabel()));
         e.setScoreValue(sanitize(dto.getScoreValue()));
-        e.setDeleted(false);
         return e;
     }
 
@@ -392,7 +375,7 @@ public class PortfolioService {
 
     public List<EducationDto> getMyEducation(String username) {
         findUserByUsername(username);
-        return educationRepository.findByUserUsernameAndDeletedFalse(username)
+        return educationRepository.findByUserUsername(username)
                 .stream().map(this::mapEducation).collect(Collectors.toList());
     }
 
@@ -414,8 +397,7 @@ public class PortfolioService {
     public void deleteEducation(String username, Long id) {
         Education ed = educationRepository.findByIdAndUserUsername(id, username)
                 .orElseThrow(() -> new ResourceNotFoundException("Education not found"));
-        ed.setDeleted(true);
-        educationRepository.save(ed);
+        educationRepository.delete(ed);
     }
 
     private Education buildEducation(Education ed, User user, EducationDto dto) {
@@ -427,7 +409,6 @@ public class PortfolioService {
         ed.setScoreLabel(sanitize(dto.getScoreLabel()));
         ed.setScoreValue(sanitize(dto.getScoreValue()));
         ed.setDuration(sanitize(dto.getDuration()));
-        ed.setDeleted(false);
         return ed;
     }
 
@@ -502,16 +483,17 @@ public class PortfolioService {
         Long userId = user.getId();
 
         Profile profile = profileRepository.findByUserId(userId).orElse(null);
-        List<Project> projects = projectRepository.findByUserIdAndDeletedFalse(userId);
-        List<Experience> experiences = experienceRepository.findByUserIdAndDeletedFalse(userId);
+        About about = aboutRepository.findByUserId(userId).orElse(null);
+        List<Project> projects = projectRepository.findByUserId(userId);
+        List<Experience> experiences = experienceRepository.findByUserId(userId);
         List<Skill> skills = skillRepository.findByUserId(userId);
-        List<Education> educations = educationRepository.findByUserIdAndDeletedFalse(userId);
+        List<Education> educations = educationRepository.findByUserId(userId);
         Resume resume = resumeRepository.findByUserId(userId).orElse(null);
         Contact contact = contactRepository.findByUserId(userId).orElse(null);
 
         return PortfolioResponse.builder()
                 .username(user.getUsername())
-                .profile(mapPortfolioIdentity(profile))
+                .profile(mapPortfolioIdentity(profile, about))
                 .projects(projects.stream().map(this::mapProject).collect(Collectors.toList()))
                 .experiences(experiences.stream().map(this::mapExperience).collect(Collectors.toList()))
                 .skills(skills.stream().map(this::mapSkill).collect(Collectors.toList()))
@@ -526,9 +508,8 @@ public class PortfolioService {
     @Transactional
     public List<ProjectDto> updateProjects(String username, List<ProjectDto> projectDtos) {
         User user = findUserByUsername(username);
-        List<Project> existing = projectRepository.findByUserIdAndDeletedFalse(user.getId());
-        existing.forEach(p -> p.setDeleted(true));
-        projectRepository.saveAll(existing);
+        List<Project> existing = projectRepository.findByUserId(user.getId());
+        projectRepository.deleteAll(existing);
 
         List<Project> updated = projectDtos.stream()
                 .map(dto -> buildProject(new Project(), user, dto))
@@ -539,9 +520,8 @@ public class PortfolioService {
     @Transactional
     public List<ExperienceDto> updateExperiences(String username, List<ExperienceDto> dtos) {
         User user = findUserByUsername(username);
-        List<Experience> existing = experienceRepository.findByUserIdAndDeletedFalse(user.getId());
-        existing.forEach(e -> e.setDeleted(true));
-        experienceRepository.saveAll(existing);
+        List<Experience> existing = experienceRepository.findByUserId(user.getId());
+        experienceRepository.deleteAll(existing);
 
         List<Experience> updated = dtos.stream()
                 .map(dto -> buildExperience(new Experience(), user, dto))
@@ -561,8 +541,7 @@ public class PortfolioService {
     public List<EducationDto> updateEducations(String username, List<EducationDto> dtos) {
         User user = findUserByUsername(username);
         List<Education> existing = educationRepository.findByUserId(user.getId());
-        existing.forEach(e -> e.setDeleted(true));
-        educationRepository.saveAll(existing);
+        educationRepository.deleteAll(existing);
         List<Education> updated = dtos.stream().map(dto -> buildEducation(new Education(), user, dto)).collect(Collectors.toList());
         return educationRepository.saveAll(updated).stream().map(this::mapEducation).collect(Collectors.toList());
     }
@@ -571,12 +550,12 @@ public class PortfolioService {
     // MAPPERS
     // ─────────────────────────────────────────────────────────────────────────
 
-    private PortfolioIdentityDto mapPortfolioIdentity(Profile profile) {
-        if (profile == null) return null;
+    private PortfolioIdentityDto mapPortfolioIdentity(Profile profile, About about) {
+        if (profile == null && about == null) return null;
 
         return PortfolioIdentityDto.builder()
-                .name(firstNonBlank(profile.getAboutName(), profile.getName()))
-                .image(firstNonBlank(profile.getAboutImage(), profile.getImage()))
+                .name(firstNonBlank(about != null ? about.getName() : null, profile != null ? profile.getProfileName() : null))
+                .image(about != null ? about.getImage() : null)
                 .build();
     }
 
@@ -584,10 +563,10 @@ public class PortfolioService {
         if (profile == null) return null;
 
         return ProfileDto.builder()
-                .name(firstNonBlank(profile.getProfileName(), profile.getName()))
-                .roleTitle(firstNonBlank(profile.getProfileRoleTitle(), profile.getRoleTitle()))
-                .location(firstNonBlank(profile.getProfileLocation(), profile.getLocation()))
-                .availability(firstNonBlank(profile.getProfileAvailability(), profile.getAvailability()))
+                .name(profile.getProfileName())
+                .roleTitle(profile.getProfileRoleTitle())
+                .location(profile.getProfileLocation())
+                .availability(profile.getProfileAvailability())
                 .osName(profile.getOsName())
                 .accountType(profile.getAccountType())
                 .access(profile.getAccess())
@@ -595,30 +574,33 @@ public class PortfolioService {
                 .build();
     }
 
-    private AboutDto mapAbout(Profile profile) {
-        if (profile == null) return null;
+    private AboutDto mapAbout(About about) {
+        if (about == null) return null;
 
         List<String> aboutList = null;
-        List<PrincipleDto> principlesList = null;
         try {
-            if (profile.getAbout() != null) {
-                aboutList = objectMapper.readValue(profile.getAbout(), new TypeReference<List<String>>() {});
-            }
-            if (profile.getPrinciples() != null) {
-                principlesList = objectMapper.readValue(profile.getPrinciples(), new TypeReference<List<PrincipleDto>>() {});
+            if (about.getAboutContent() != null) {
+                aboutList = objectMapper.readValue(about.getAboutContent(), new TypeReference<List<String>>() {});
             }
         } catch (Exception e) {
             log.warn("Failed to parse about/principles", e);
         }
 
+        List<PrincipleDto> principlesList = about.getPrinciples().stream()
+                .map(principle -> PrincipleDto.builder()
+                        .title(principle.getTitle())
+                        .description(principle.getDescription())
+                        .build())
+                .toList();
+
         return AboutDto.builder()
-                .name(firstNonBlank(profile.getAboutName(), profile.getName()))
-                .roleTitle(firstNonBlank(profile.getAboutRoleTitle(), profile.getRoleTitle()))
-                .bio(firstNonBlank(profile.getAboutBio(), profile.getBio()))
-                .image(firstNonBlank(profile.getAboutImage(), profile.getImage()))
-                .location(firstNonBlank(profile.getAboutLocation(), profile.getLocation()))
-                .availability(firstNonBlank(profile.getAboutAvailability(), profile.getAvailability()))
-                .experienceYears(firstNonBlank(profile.getAboutExperienceYears(), profile.getExperienceYears()))
+                .name(about.getName())
+                .roleTitle(about.getRoleTitle())
+                .bio(about.getBio())
+                .image(about.getImage())
+                .location(about.getLocation())
+                .availability(about.getAvailability())
+                .experienceYears(about.getExperienceYears())
                 .about(aboutList)
                 .principles(principlesList)
                 .build();
@@ -658,7 +640,9 @@ public class PortfolioService {
                 .company(exp.getCompany())
                 .roleTitle(exp.getRoleTitle())
                 .duration(exp.getDuration())
+                .startMonth(exp.getStartMonth())
                 .startYear(exp.getStartYear())
+                .endMonth(exp.getEndMonth())
                 .endYear(exp.getEndYear())
                 .isCurrent(exp.isCurrent())
                 .responsibilities(exp.getResponsibilities())
@@ -696,7 +680,6 @@ public class PortfolioService {
                 .scoreLabel(education.getScoreLabel())
                 .scoreValue(education.getScoreValue())
                 .duration(education.getDuration())
-                .deleted(education.isDeleted())
                 .build();
     }
 
@@ -728,5 +711,152 @@ public class PortfolioService {
                 .professionalLinks(professional)
                 .socialLinks(social)
                 .build();
+    }
+
+    private ExperiencePeriod normalizeExperiencePeriod(ExperienceDto dto) {
+        ParsedDuration parsedDuration = parseDuration(dto.getDuration());
+
+        Integer startMonth = firstNonNull(dto.getStartMonth(), parsedDuration.startMonth());
+        Integer startYear = firstNonNull(dto.getStartYear(), parsedDuration.startYear());
+        boolean current = dto.isCurrent() || parsedDuration.current();
+        Integer endMonth = current ? null : firstNonNull(dto.getEndMonth(), parsedDuration.endMonth());
+        Integer endYear = current ? null : firstNonNull(dto.getEndYear(), parsedDuration.endYear());
+
+        if (startMonth == null || startYear == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EXPERIENCE_RANGE", "Start duration is required");
+        }
+        if (startMonth < 1 || startMonth > 12) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EXPERIENCE_RANGE", "Start month is not valid");
+        }
+        if (!current && (endMonth == null || endYear == null)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EXPERIENCE_RANGE", "End duration is required");
+        }
+        if (!current && (endMonth < 1 || endMonth > 12)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EXPERIENCE_RANGE", "End month is not valid");
+        }
+        if (!current && comparePeriod(startYear, startMonth, endYear, endMonth) > 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_EXPERIENCE_RANGE", "Start duration must be before or equal to end duration");
+        }
+
+        return new ExperiencePeriod(
+                startMonth,
+                startYear,
+                current ? null : endMonth,
+                current ? null : endYear,
+                current,
+                formatDuration(startMonth, startYear, current ? null : endMonth, current ? null : endYear, current)
+        );
+    }
+
+    private ParsedDuration parseDuration(String duration) {
+        String value = sanitize(duration);
+        if (value == null || value.isBlank()) {
+            return ParsedDuration.empty();
+        }
+
+        String[] parts = value.split("\\s*[-\u2013\u2014]\\s*");
+        if (parts.length != 2) {
+            return ParsedDuration.empty();
+        }
+
+        ParsedDurationPart start = parseDurationPart(parts[0]);
+        if (!start.valid()) {
+            return ParsedDuration.empty();
+        }
+
+        String endToken = sanitize(parts[1]);
+        if (endToken != null && endToken.equalsIgnoreCase("present")) {
+            return new ParsedDuration(start.month(), start.year(), null, null, true);
+        }
+
+        ParsedDurationPart end = parseDurationPart(parts[1]);
+        if (!end.valid()) {
+            return ParsedDuration.empty();
+        }
+
+        return new ParsedDuration(start.month(), start.year(), end.month(), end.year(), false);
+    }
+
+    private ParsedDurationPart parseDurationPart(String rawValue) {
+        String value = sanitize(rawValue);
+        if (value == null || value.isBlank()) {
+            return ParsedDurationPart.invalid();
+        }
+
+        String[] tokens = value.split("\\s+");
+        if (tokens.length == 2) {
+            Integer month = parseMonthToken(tokens[0]);
+            Integer year = parseInteger(tokens[1]);
+            return month != null && year != null
+                    ? new ParsedDurationPart(month, year, true)
+                    : ParsedDurationPart.invalid();
+        }
+        if (tokens.length == 1) {
+            Integer year = parseInteger(tokens[0]);
+            return year != null ? new ParsedDurationPart(1, year, true) : ParsedDurationPart.invalid();
+        }
+        return ParsedDurationPart.invalid();
+    }
+
+    private Integer parseMonthToken(String rawValue) {
+        String normalized = sanitize(rawValue);
+        if (normalized == null || normalized.length() < 3) {
+            return null;
+        }
+        try {
+            return Month.valueOf(normalized.substring(0, 3).toUpperCase(Locale.ENGLISH)).getValue();
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
+    private Integer parseInteger(String rawValue) {
+        try {
+            return Integer.valueOf(rawValue);
+        } catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private int comparePeriod(int startYear, int startMonth, int endYear, int endMonth) {
+        int start = startYear * 100 + startMonth;
+        int end = endYear * 100 + endMonth;
+        return Integer.compare(start, end);
+    }
+
+    private String formatDuration(Integer startMonth, Integer startYear, Integer endMonth, Integer endYear, boolean current) {
+        return formatMonthYear(startMonth, startYear) + " - " + (current ? "Present" : formatMonthYear(endMonth, endYear));
+    }
+
+    private String formatMonthYear(Integer month, Integer year) {
+        Month monthEnum = Month.of(month);
+        String monthLabel = monthEnum.name().substring(0, 1) + monthEnum.name().substring(1, 3).toLowerCase(Locale.ENGLISH);
+        return monthLabel + " " + year;
+    }
+
+    private Integer firstNonNull(Integer primary, Integer fallback) {
+        return primary != null ? primary : fallback;
+    }
+
+    private record ExperiencePeriod(
+            Integer startMonth,
+            Integer startYear,
+            Integer endMonth,
+            Integer endYear,
+            boolean current,
+            String duration
+    ) {
+    }
+
+    private record ParsedDuration(Integer startMonth, Integer startYear, Integer endMonth, Integer endYear, boolean current) {
+        static ParsedDuration empty() {
+            return new ParsedDuration(null, null, null, null, false);
+        }
+    }
+
+    private record ParsedDurationPart(Integer month, Integer year, boolean valid) {
+        static ParsedDurationPart invalid() {
+            return new ParsedDurationPart(null, null, false);
+        }
     }
 }

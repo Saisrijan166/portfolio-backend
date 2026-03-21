@@ -6,58 +6,54 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Table(name = "profiles")
+@Table(name = "abouts")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Profile {
+public class About {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Tenant Isolation
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
     @Column(length = 100)
-    private String osName;
+    private String name;
 
     @Column(length = 100)
-    private String accountType;
+    private String roleTitle;
 
-    @Column(length = 100)
-    private String access;
+    @Column(length = 500)
+    private String bio;
 
-    @Column(length = 100)
-    private String roleDescription;
-
-    // Profile module fields
-    @Column(length = 100)
-    private String profileName;
-
-    @Column(length = 100)
-    private String profileRoleTitle;
+    @Column(length = 512)
+    private String image;
 
     @Column(length = 50)
-    private String profileLocation;
+    private String location;
 
     @Column(length = 50)
-    private String profileAvailability;
+    private String availability;
 
-    @Column(length = 255)
-    private String profilePrimaryEmail;
-
-    @Column(columnDefinition = "TEXT")
-    private String profileProfessionalLinks;
+    @Column(length = 50)
+    private String experienceYears;
 
     @Column(columnDefinition = "TEXT")
-    private String profileSocialLinks;
+    private String aboutContent;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "about", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC, id ASC")
+    private List<AboutPrinciple> principles = new ArrayList<>();
 
     @CreationTimestamp
     @Column(updatable = false)

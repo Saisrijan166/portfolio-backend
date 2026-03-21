@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PublicProfileController {
 
-    private static final String CACHE_PUBLIC = "public, max-age=300, s-maxage=300";
+    private static final String CACHE_PUBLIC = "no-store, max-age=0";
     private static final String USERNAME_PATTERN = "^[a-z0-9][a-z0-9-]{2,30}$";
 
     private final ProfileService profileService;

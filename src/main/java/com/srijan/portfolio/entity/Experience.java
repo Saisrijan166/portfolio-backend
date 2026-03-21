@@ -10,8 +10,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "experiences", indexes = {
-    @Index(name = "idx_experiences_user_id", columnList = "user_id"),
-    @Index(name = "idx_experiences_user_deleted", columnList = "user_id,deleted")
+    @Index(name = "idx_experiences_user_id", columnList = "user_id")
 })
 @Getter
 @Setter
@@ -29,11 +28,19 @@ public class Experience {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(length = 100)
     private String company;
+
+    @Column(length = 100)
     private String roleTitle;
+
+    @Column(length = 100)
     private String duration; // e.g. "Jan 2023 - Present"
 
+    private Integer startMonth;
+
     private Integer startYear;
+    private Integer endMonth;
     private Integer endYear;
     private boolean isCurrent;
 
@@ -49,23 +56,30 @@ public class Experience {
 
     @ElementCollection
     @CollectionTable(name = "experience_skills", joinColumns = @JoinColumn(name = "experience_id"))
-    @Column(name = "skill")
+    @Column(name = "skill", length = 255)
     private List<String> skills;
 
     // Flag to separate "Professional Experience" vs "Academic Journey"
     private boolean isAcademic;
 
     // Academic specific fields
+    @Column(length = 100)
     private String level;
-    private String institute;
-    private String location;
-    private String degree;
-    private String scoreLabel; // e.g. "GPA", "Percentage"
-    private String scoreValue;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private boolean deleted = false;
+    @Column(length = 100)
+    private String institute;
+
+    @Column(length = 100)
+    private String location;
+
+    @Column(length = 100)
+    private String degree;
+
+    @Column(length = 100)
+    private String scoreLabel; // e.g. "GPA", "Percentage"
+
+    @Column(length = 100)
+    private String scoreValue;
 
     @CreationTimestamp
     @Column(updatable = false)

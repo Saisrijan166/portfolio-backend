@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ContactLinkDto {
     @NotBlank
-    @Size(max = 255)
+    @Size(max = 100)
     private String label;
 
     @NotBlank

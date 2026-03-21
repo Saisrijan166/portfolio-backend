@@ -8,11 +8,9 @@ import java.util.List;
 
 @Repository
 public interface EducationRepository extends JpaRepository<Education, Long> {
-    List<Education> findByUserIdAndDeletedFalse(Long userId);
-
     List<Education> findByUserId(Long userId);
 
-    List<Education> findByUserUsernameAndDeletedFalse(String username);
+    List<Education> findByUserUsername(String username);
 
     java.util.Optional<Education> findByIdAndUserUsername(Long id, String username);
 }

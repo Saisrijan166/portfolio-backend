@@ -14,29 +14,29 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AboutDto {
-    @Size(max = 255)
+    @Size(max = 100)
     private String name;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String roleTitle;
 
-    @Size(max = 2000)
+    @Size(max = 500)
     private String bio;
 
     @Size(max = 512)
     private String image;
 
-    @Size(max = 255)
+    @Size(max = 50)
     private String location;
 
-    @Size(max = 255)
+    @Size(max = 50)
     private String availability;
 
-    @Size(max = 255)
+    @Size(max = 50)
     private String experienceYears;
 
     @Size(max = 20)
-    private List<String> about;
+    private List<@Size(max = 3000) String> about;
 
     @Valid
     @Size(max = 12)

@@ -12,11 +12,9 @@ import java.util.List;
 public interface ExperienceRepository extends JpaRepository<Experience, Long> {
     List<Experience> findByUserId(Long userId);
 
-    List<Experience> findByUserIdAndDeletedFalse(Long userId);
+    List<Experience> findByUserUsername(String username);
 
-    List<Experience> findByUserUsernameAndDeletedFalse(String username);
-
-    @Query("select count(e) from Experience e where e.user.id = :userId and e.deleted = false and e.isAcademic = false")
+    @Query("select count(e) from Experience e where e.user.id = :userId and e.isAcademic = false")
     long countProfessionalByUserId(@Param("userId") Long userId);
 
     java.util.Optional<Experience> findByIdAndUserUsername(Long id, String username);

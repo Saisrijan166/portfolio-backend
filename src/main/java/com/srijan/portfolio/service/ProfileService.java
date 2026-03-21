@@ -173,10 +173,10 @@ public class ProfileService {
                 : contact != null ? contact.getPrimaryEmail() : null;
 
         return ProfileDto.builder()
-                .name(profile != null ? firstNonBlank(profile.getProfileName(), profile.getName()) : null)
-                .roleTitle(profile != null ? firstNonBlank(profile.getProfileRoleTitle(), profile.getRoleTitle()) : null)
-                .location(profile != null ? firstNonBlank(profile.getProfileLocation(), profile.getLocation()) : null)
-                .availability(profile != null ? firstNonBlank(profile.getProfileAvailability(), profile.getAvailability()) : null)
+                .name(profile != null ? profile.getProfileName() : null)
+                .roleTitle(profile != null ? profile.getProfileRoleTitle() : null)
+                .location(profile != null ? profile.getProfileLocation() : null)
+                .availability(profile != null ? profile.getProfileAvailability() : null)
                 .osName(profile != null ? profile.getOsName() : null)
                 .accountType(profile != null ? profile.getAccountType() : null)
                 .access(profile != null ? profile.getAccess() : null)

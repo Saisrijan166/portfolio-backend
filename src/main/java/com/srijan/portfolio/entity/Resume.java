@@ -24,9 +24,11 @@ public class Resume {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
+    @Column(length = 512)
     private String resumeUrl;
 
     // Display string like "January 2026"
+    @Column(length = 255)
     private String lastUpdated;
 
     @CreationTimestamp

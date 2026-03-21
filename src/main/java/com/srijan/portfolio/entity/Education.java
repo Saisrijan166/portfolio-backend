@@ -24,17 +24,26 @@ public class Education {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(length = 100)
     private String level; // e.g., "Intermediate", "High School"
-    private String institute;
-    private String location;
-    private String degree; // "Science Stream", "ICSE Board"
-    private String scoreLabel; // "Percentage", "CGPA"
-    private String scoreValue; // "91%", "95%"
-    private String duration; // "2020 - 2022"
 
-    @Builder.Default
-    @Column(nullable = false)
-    private boolean deleted = false;
+    @Column(length = 100)
+    private String institute;
+
+    @Column(length = 100)
+    private String location;
+
+    @Column(length = 100)
+    private String degree; // "Science Stream", "ICSE Board"
+
+    @Column(length = 100)
+    private String scoreLabel; // "Percentage", "CGPA"
+
+    @Column(length = 100)
+    private String scoreValue; // "91%", "95%"
+
+    @Column(length = 100)
+    private String duration; // "2020 - 2022"
 
     @CreationTimestamp
     @Column(updatable = false)

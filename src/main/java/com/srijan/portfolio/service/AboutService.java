@@ -1,14 +1,14 @@
 package com.srijan.portfolio.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srijan.portfolio.dto.AboutDto;
 import com.srijan.portfolio.dto.PrincipleDto;
-import com.srijan.portfolio.entity.Profile;
+import com.srijan.portfolio.entity.About;
+import com.srijan.portfolio.entity.AboutPrinciple;
 import com.srijan.portfolio.entity.User;
 import com.srijan.portfolio.exception.ApiException;
 import com.srijan.portfolio.exception.ResourceNotFoundException;
-import com.srijan.portfolio.repository.ProfileRepository;
+import com.srijan.portfolio.repository.AboutRepository;
 import com.srijan.portfolio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +26,7 @@ import java.util.Optional;
 public class AboutService {
 
     private final UserRepository userRepository;
-    private final ProfileRepository profileRepository;
+    private final AboutRepository aboutRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
@@ -35,56 +35,79 @@ public class AboutService {
         if (userOptional.isEmpty()) {
             return null;
         }
-        return mapAbout(profileRepository.findByUserId(userOptional.get().getId()).orElse(null));
+        return mapAbout(readAboutSafely(userOptional.get().getId()));
     }
 
     @Transactional(readOnly = true)
     public AboutDto getMyAbout(String username) {
         User user = findUserByUsername(username);
-        return mapAbout(profileRepository.findByUserId(user.getId()).orElse(null));
+        return mapAbout(readAboutSafely(user.getId()));
     }
 
     @Transactional
     public AboutDto updateAbout(String username, AboutDto dto) {
         User user = findUserByUsername(username);
-        Profile profile = profileRepository.findByUserId(user.getId()).orElse(new Profile());
+        About about = readAboutSafely(user.getId());
+        if (about == null) {
+            about = new About();
+        }
 
-        profile.setUser(user);
+        about.setUser(user);
         if (dto.getName() != null) {
-            profile.setAboutName(sanitize(dto.getName()));
+            about.setName(sanitize(dto.getName()));
         }
         if (dto.getRoleTitle() != null) {
-            profile.setAboutRoleTitle(sanitize(dto.getRoleTitle()));
+            about.setRoleTitle(sanitize(dto.getRoleTitle()));
         }
         if (dto.getBio() != null) {
-            profile.setAboutBio(sanitize(dto.getBio()));
+            about.setBio(sanitize(dto.getBio()));
         }
         if (dto.getImage() != null) {
-            profile.setAboutImage(sanitize(dto.getImage()));
+            about.setImage(sanitize(dto.getImage()));
         }
         if (dto.getLocation() != null) {
-            profile.setAboutLocation(sanitize(dto.getLocation()));
+            about.setLocation(sanitize(dto.getLocation()));
         }
         if (dto.getAvailability() != null) {
-            profile.setAboutAvailability(sanitize(dto.getAvailability()));
+            about.setAvailability(sanitize(dto.getAvailability()));
         }
         if (dto.getExperienceYears() != null) {
-            profile.setAboutExperienceYears(sanitize(dto.getExperienceYears()));
+            about.setExperienceYears(sanitize(dto.getExperienceYears()));
         }
 
         try {
             if (dto.getAbout() != null) {
-                profile.setAbout(objectMapper.writeValueAsString(sanitizeList(dto.getAbout())));
+                about.setAboutContent(objectMapper.writeValueAsString(sanitizeList(dto.getAbout())));
             }
-            if (dto.getPrinciples() != null) {
-                profile.setPrinciples(objectMapper.writeValueAsString(dto.getPrinciples()));
-            }
-        } catch (Exception e) {
-            log.error("Failed to serialize about data", e);
+        } catch (Exception exception) {
+            log.error("Failed to serialize about data", exception);
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "ABOUT_SERIALIZATION_FAILED", "Failed to serialize about data");
         }
 
-        return mapAbout(profileRepository.save(profile));
+        if (dto.getPrinciples() != null) {
+            about.getPrinciples().clear();
+            List<PrincipleDto> sanitizedPrinciples = sanitizePrinciples(dto.getPrinciples());
+            for (int index = 0; index < sanitizedPrinciples.size(); index++) {
+                PrincipleDto principle = sanitizedPrinciples.get(index);
+                about.getPrinciples().add(AboutPrinciple.builder()
+                        .about(about)
+                        .sortOrder(index)
+                        .title(principle.getTitle())
+                        .description(principle.getDescription())
+                        .build());
+            }
+        }
+
+        return mapAbout(aboutRepository.save(about));
+    }
+
+    private About readAboutSafely(Long userId) {
+        try {
+            return aboutRepository.findByUserId(userId).orElse(null);
+        } catch (Exception exception) {
+            log.warn("About table read failed for userId={}", userId, exception);
+            return null;
+        }
     }
 
     private User findUserByUsername(String username) {
@@ -107,44 +130,55 @@ public class AboutService {
                 .toList();
     }
 
-    private AboutDto mapAbout(Profile profile) {
-        if (profile == null) {
+    private List<PrincipleDto> sanitizePrinciples(List<PrincipleDto> values) {
+        if (values == null) {
+            return Collections.emptyList();
+        }
+        return values.stream()
+                .filter(principle -> principle != null)
+                .map(principle -> PrincipleDto.builder()
+                        .title(sanitize(principle.getTitle()))
+                        .description(sanitize(principle.getDescription()))
+                        .build())
+                .filter(principle -> principle.getTitle() != null && !principle.getTitle().isBlank())
+                .filter(principle -> principle.getDescription() != null && !principle.getDescription().isBlank())
+                .toList();
+    }
+
+    private AboutDto mapAbout(About about) {
+        if (about == null) {
             return null;
         }
 
         List<String> aboutList = null;
-        List<PrincipleDto> principlesList = null;
         try {
-            if (profile.getAbout() != null) {
-                aboutList = objectMapper.readValue(profile.getAbout(), new TypeReference<List<String>>() {});
+            if (about != null && about.getAboutContent() != null) {
+                aboutList = objectMapper.readValue(
+                        about.getAboutContent(),
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)
+                );
             }
-            if (profile.getPrinciples() != null) {
-                principlesList = objectMapper.readValue(profile.getPrinciples(), new TypeReference<List<PrincipleDto>>() {});
-            }
-        } catch (Exception e) {
-            log.warn("Failed to parse about data", e);
+        } catch (Exception exception) {
+            log.warn("Failed to parse about data", exception);
         }
 
+        List<PrincipleDto> principlesList = about.getPrinciples().stream()
+                .map(principle -> PrincipleDto.builder()
+                        .title(principle.getTitle())
+                        .description(principle.getDescription())
+                        .build())
+                .toList();
+
         return AboutDto.builder()
-                .name(firstNonBlank(profile.getAboutName(), profile.getName()))
-                .roleTitle(firstNonBlank(profile.getAboutRoleTitle(), profile.getRoleTitle()))
-                .bio(firstNonBlank(profile.getAboutBio(), profile.getBio()))
-                .image(firstNonBlank(profile.getAboutImage(), profile.getImage()))
-                .location(firstNonBlank(profile.getAboutLocation(), profile.getLocation()))
-                .availability(firstNonBlank(profile.getAboutAvailability(), profile.getAvailability()))
-                .experienceYears(firstNonBlank(profile.getAboutExperienceYears(), profile.getExperienceYears()))
+                .name(about.getName())
+                .roleTitle(about.getRoleTitle())
+                .bio(about.getBio())
+                .image(about.getImage())
+                .location(about.getLocation())
+                .availability(about.getAvailability())
+                .experienceYears(about.getExperienceYears())
                 .about(aboutList)
                 .principles(principlesList)
                 .build();
-    }
-
-    private String firstNonBlank(String primary, String fallback) {
-        if (primary != null && !primary.isBlank()) {
-            return primary;
-        }
-        if (fallback != null && !fallback.isBlank()) {
-            return fallback;
-        }
-        return null;
     }
 }
