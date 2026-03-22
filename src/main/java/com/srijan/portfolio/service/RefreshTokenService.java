@@ -30,6 +30,11 @@ public class RefreshTokenService {
         repository.deleteByUserId(userId);
     }
 
+    @Transactional
+    public void revokeByToken(String token) {
+        repository.deleteByToken(token);
+    }
+
     public RefreshToken createRefreshToken(User user) {
         RefreshToken token = RefreshToken.builder()
                 .user(user)

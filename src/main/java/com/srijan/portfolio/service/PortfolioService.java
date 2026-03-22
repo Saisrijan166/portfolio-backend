@@ -13,13 +13,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.Year;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Stream;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,7 +39,10 @@ public class PortfolioService {
     private final EducationRepository educationRepository;
     private final ResumeRepository resumeRepository;
     private final ContactRepository contactRepository;
+    private final DesktopWidgetConfigRepository desktopWidgetConfigRepository;
     private final ObjectMapper objectMapper;
+
+    private static final DateTimeFormatter BOOTSTRAP_TIMESTAMP_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     // ─────────────────────────────────────────────────────────────────────────
     // HELPERS
@@ -70,6 +76,16 @@ public class PortfolioService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
     }
 
+    private About readAboutSafely(Long userId) {
+        try {
+            List<About> abouts = aboutRepository.findAllByUserIdOrderByIdAsc(userId);
+            return abouts.isEmpty() ? null : abouts.getFirst();
+        } catch (Exception exception) {
+            log.warn("About table read failed for userId={}", userId, exception);
+            return null;
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // PUBLIC PORTFOLIO BOOTSTRAP
     // ─────────────────────────────────────────────────────────────────────────
@@ -84,13 +100,23 @@ public class PortfolioService {
         Long userId = user.getId();
 
         Profile profile = profileRepository.findByUserId(userId).orElse(null);
-        About about = aboutRepository.findByUserId(userId).orElse(null);
+        About about = readAboutSafely(userId);
+        DesktopWidgetConfig widgets = desktopWidgetConfigRepository.findByUserId(userId).orElse(null);
+        Resume resume = resumeRepository.findByUserId(userId).orElse(null);
+        Contact contact = contactRepository.findByUserId(userId).orElse(null);
+        List<Project> projects = projectRepository.findByUserId(userId);
+        List<Experience> experiences = experienceRepository.findByUserId(userId);
+        List<Skill> skills = skillRepository.findByUserId(userId);
+        List<Education> educations = educationRepository.findByUserId(userId);
         long projectCount = projectRepository.countByUserId(userId);
         long professionalExperienceCount = experienceRepository.countProfessionalByUserId(userId);
 
         return PortfolioResponse.builder()
                 .username(user.getUsername())
                 .profile(mapPortfolioIdentity(profile, about))
+                .about(mapPortfolioAboutSummary(about))
+                .widgets(mapDesktopWidgets(widgets))
+                .lastUpdated(resolveLastUpdated(profile, about, widgets, resume, contact, projects, experiences, skills, educations))
                 .projectCount(projectCount)
                 .experienceCount(professionalExperienceCount)
                 .build();
@@ -118,7 +144,7 @@ public class PortfolioService {
             return null;
         }
         User user = userOptional.get();
-        About about = aboutRepository.findByUserId(user.getId()).orElse(null);
+        About about = readAboutSafely(user.getId());
         return mapAbout(about);
     }
 
@@ -212,7 +238,7 @@ public class PortfolioService {
 
     public AboutDto getMyAbout(String username) {
         User user = findUserByUsername(username);
-        return mapAbout(aboutRepository.findByUserId(user.getId()).orElse(null));
+        return mapAbout(readAboutSafely(user.getId()));
     }
 
     @Transactional
@@ -483,23 +509,27 @@ public class PortfolioService {
         Long userId = user.getId();
 
         Profile profile = profileRepository.findByUserId(userId).orElse(null);
-        About about = aboutRepository.findByUserId(userId).orElse(null);
+        About about = readAboutSafely(userId);
         List<Project> projects = projectRepository.findByUserId(userId);
         List<Experience> experiences = experienceRepository.findByUserId(userId);
         List<Skill> skills = skillRepository.findByUserId(userId);
         List<Education> educations = educationRepository.findByUserId(userId);
         Resume resume = resumeRepository.findByUserId(userId).orElse(null);
         Contact contact = contactRepository.findByUserId(userId).orElse(null);
+        DesktopWidgetConfig widgets = desktopWidgetConfigRepository.findByUserId(userId).orElse(null);
 
         return PortfolioResponse.builder()
                 .username(user.getUsername())
                 .profile(mapPortfolioIdentity(profile, about))
+                .about(mapPortfolioAboutSummary(about))
+                .widgets(mapDesktopWidgets(widgets))
                 .projects(projects.stream().map(this::mapProject).collect(Collectors.toList()))
                 .experiences(experiences.stream().map(this::mapExperience).collect(Collectors.toList()))
                 .skills(skills.stream().map(this::mapSkill).collect(Collectors.toList()))
                 .educations(educations.stream().map(this::mapEducation).collect(Collectors.toList()))
                 .resume(mapResume(resume))
                 .contact(mapContact(contact))
+                .lastUpdated(resolveLastUpdated(profile, about, widgets, resume, contact, projects, experiences, skills, educations))
                 .build();
     }
 
@@ -554,8 +584,35 @@ public class PortfolioService {
         if (profile == null && about == null) return null;
 
         return PortfolioIdentityDto.builder()
-                .name(firstNonBlank(about != null ? about.getName() : null, profile != null ? profile.getProfileName() : null))
+                .name(firstNonBlank(profile != null ? profile.getProfileName() : null, about != null ? about.getName() : null))
                 .image(about != null ? about.getImage() : null)
+                .build();
+    }
+
+    private PortfolioAboutSummaryDto mapPortfolioAboutSummary(About about) {
+        if (about == null) {
+            return null;
+        }
+
+        return PortfolioAboutSummaryDto.builder()
+                .name(about.getName())
+                .roleTitle(about.getRoleTitle())
+                .build();
+    }
+
+    private DesktopWidgetsDto mapDesktopWidgets(DesktopWidgetConfig config) {
+        if (config == null) {
+            return DesktopWidgetsDto.builder()
+                    .bottomLeftPrimary(List.of())
+                    .bottomLeftSecondary(List.of())
+                    .topRight(List.of())
+                    .build();
+        }
+
+        return DesktopWidgetsDto.builder()
+                .bottomLeftPrimary(readStringList(config.getBottomLeftPrimary()))
+                .bottomLeftSecondary(readStringList(config.getBottomLeftSecondary()))
+                .topRight(readStringList(config.getTopRight()))
                 .build();
     }
 
@@ -614,6 +671,51 @@ public class PortfolioService {
             return fallback;
         }
         return null;
+    }
+
+    private List<String> readStringList(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+
+        try {
+            return objectMapper.readValue(raw, new TypeReference<List<String>>() {});
+        } catch (Exception exception) {
+            log.warn("Failed to parse string list payload", exception);
+            return List.of();
+        }
+    }
+
+    private String resolveLastUpdated(
+            Profile profile,
+            About about,
+            DesktopWidgetConfig widgets,
+            Resume resume,
+            Contact contact,
+            List<Project> projects,
+            List<Experience> experiences,
+            List<Skill> skills,
+            List<Education> educations
+    ) {
+        return Stream.concat(
+                        Stream.of(
+                                profile != null ? profile.getUpdatedAt() : null,
+                                about != null ? about.getUpdatedAt() : null,
+                                widgets != null ? widgets.getUpdatedAt() : null,
+                                resume != null ? resume.getUpdatedAt() : null,
+                                contact != null ? contact.getUpdatedAt() : null
+                        ),
+                        Stream.of(
+                                projects.stream().map(Project::getUpdatedAt).max(LocalDateTime::compareTo).orElse(null),
+                                experiences.stream().map(Experience::getUpdatedAt).max(LocalDateTime::compareTo).orElse(null),
+                                skills.stream().map(Skill::getUpdatedAt).max(LocalDateTime::compareTo).orElse(null),
+                                educations.stream().map(Education::getUpdatedAt).max(LocalDateTime::compareTo).orElse(null)
+                        )
+                )
+                .filter(value -> value != null)
+                .max(LocalDateTime::compareTo)
+                .map(BOOTSTRAP_TIMESTAMP_FORMATTER::format)
+                .orElse(null);
     }
 
     ProjectDto mapProject(Project project) {

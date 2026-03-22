@@ -47,10 +47,7 @@ public class AboutService {
     @Transactional
     public AboutDto updateAbout(String username, AboutDto dto) {
         User user = findUserByUsername(username);
-        About about = readAboutSafely(user.getId());
-        if (about == null) {
-            about = new About();
-        }
+        About about = aboutRepository.findByUserId(user.getId()).orElseGet(About::new);
 
         about.setUser(user);
         if (dto.getName() != null) {
@@ -103,7 +100,8 @@ public class AboutService {
 
     private About readAboutSafely(Long userId) {
         try {
-            return aboutRepository.findByUserId(userId).orElse(null);
+            List<About> abouts = aboutRepository.findAllByUserIdOrderByIdAsc(userId);
+            return abouts.isEmpty() ? null : abouts.getFirst();
         } catch (Exception exception) {
             log.warn("About table read failed for userId={}", userId, exception);
             return null;

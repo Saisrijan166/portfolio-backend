@@ -14,12 +14,15 @@ import java.util.List;
 public class PortfolioResponse {
     private String username;
     private PortfolioIdentityDto profile;
+    private PortfolioAboutSummaryDto about;
+    private DesktopWidgetsDto widgets;
     private List<ProjectDto> projects;
     private List<ExperienceDto> experiences;
     private List<SkillDto> skills;
     private List<EducationDto> educations;
     private ResumeDto resume;
     private ContactDto contact;
+    private String lastUpdated;
     // For public bootstrap endpoint
     private Long projectCount;
     private Long experienceCount;

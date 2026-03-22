@@ -7,7 +7,6 @@ import com.srijan.portfolio.dto.UsernameAvailabilityDto;
 import com.srijan.portfolio.entity.User;
 import com.srijan.portfolio.exception.ConflictException;
 import com.srijan.portfolio.exception.ResourceNotFoundException;
-import com.srijan.portfolio.exception.UnauthorizedException;
 import com.srijan.portfolio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -69,10 +68,6 @@ public class AccountService {
     @Transactional
     public void changePassword(String currentUsername, ChangePasswordRequest request) {
         User user = findUserByUsername(currentUsername);
-
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new UnauthorizedException("INVALID_CURRENT_PASSWORD", "Current password is incorrect");
-        }
 
         if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
             throw new ConflictException("PASSWORD_UNCHANGED", "New password must be different from the current password");

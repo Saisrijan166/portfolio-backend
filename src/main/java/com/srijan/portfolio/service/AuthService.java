@@ -80,6 +80,11 @@ public class AuthService {
                 .build();
     }
 
+    @Transactional
+    public void logoutSession(String refreshTokenValue) {
+        refreshTokenService.revokeByToken(refreshTokenValue);
+    }
+
     private AuthResponse buildAuthResponse(User user, RefreshToken refreshToken) {
         return AuthResponse.builder()
                 .accessToken(jwtUtil.generateAccessToken(user.getUsername(), user.getRole()))
