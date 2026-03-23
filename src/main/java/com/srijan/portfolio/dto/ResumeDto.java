@@ -14,7 +14,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ResumeDto {
     @NotBlank
-    @Pattern(regexp = "^(https?://.+|/.+)$", message = "Resume URL must be an absolute URL or absolute path")
+    @Pattern(
+            regexp = "^(https?://(localhost|\\d{1,3}(?:\\.\\d{1,3}){3}|(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,})(?::\\d{1,5})?(?:/\\S*)?|/\\S+)$",
+            message = "Resume URL must be a valid absolute URL or absolute path"
+    )
     @Size(max = 512)
     private String resumeUrl;
 
