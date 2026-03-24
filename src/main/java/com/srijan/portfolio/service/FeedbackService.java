@@ -8,7 +8,6 @@ import com.srijan.portfolio.exception.ResourceNotFoundException;
 import com.srijan.portfolio.repository.PlatformFeedbackRepository;
 import com.srijan.portfolio.repository.PortfolioFeedbackRepository;
 import com.srijan.portfolio.repository.UserRepository;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -39,94 +38,96 @@ public class FeedbackService {
     @Value("${feedback.hash.secret:feedback-default-secret}")
     private String feedbackHashSecret;
 
-    @Value("${security.trust-proxy-headers:false}")
-    private boolean trustProxyHeaders;
-
     @Transactional
     public FeedbackSubmissionResponse submitPublicPortfolioFeedback(
             String username,
             FeedbackSubmitRequest request,
-            String visitorToken,
-            HttpServletRequest httpRequest
+            String visitorToken
     ) {
         User owner = findUserByUsername(username);
-        String clientIp = resolveClientIp(httpRequest);
-        String tokenHash = visitorTokenHash(visitorToken, clientIp);
-        PortfolioFeedback feedback = portfolioFeedbackRepository
-                .findByOwnerIdAndVisitorTokenHash(owner.getId(), tokenHash)
-                .orElseGet(() -> PortfolioFeedback.builder()
-                        .owner(owner)
-                        .visitorTokenHash(tokenHash)
-                        .build());
+        PortfolioFeedback ratingFeedback = null;
+        PortfolioFeedback messageFeedback = null;
+        boolean ratingUpdatedExisting = false;
 
-        boolean updatedExisting = feedback.getId() != null;
-        boolean hadMessage = hasText(feedback.getMessage());
-
-        feedback.setVisitorIp(hashIdentifier("ip", clientIp));
         if (request.getRating() != null) {
-            feedback.setRating(request.getRating());
+            String tokenHash = visitorTokenHash(visitorToken);
+            ratingFeedback = portfolioFeedbackRepository
+                    .findByOwnerIdAndVisitorTokenHash(owner.getId(), tokenHash)
+                    .orElseGet(() -> PortfolioFeedback.builder()
+                            .owner(owner)
+                            .visitorTokenHash(tokenHash)
+                            .build());
+            ratingUpdatedExisting = ratingFeedback.getId() != null;
+            ratingFeedback.setRating(request.getRating());
+            ratingFeedback = portfolioFeedbackRepository.save(ratingFeedback);
         }
+
         if (hasText(request.getMessage())) {
-            feedback.setMessage(clean(request.getMessage()));
+            messageFeedback = portfolioFeedbackRepository.save(
+                    PortfolioFeedback.builder()
+                            .owner(owner)
+                            .submitterName(cleanName(request.getName()))
+                            .message(clean(request.getMessage()))
+                            .build()
+            );
+            feedbackEmailService.sendPortfolioFeedbackNotification(owner, messageFeedback);
+        } else if (ratingFeedback != null && !ratingUpdatedExisting) {
+            feedbackEmailService.sendPortfolioFeedbackNotification(owner, ratingFeedback);
         }
 
-        PortfolioFeedback saved = portfolioFeedbackRepository.save(feedback);
-        if (!updatedExisting || (!hadMessage && hasText(saved.getMessage()))) {
-            feedbackEmailService.sendPortfolioFeedbackNotification(owner, saved);
+        PortfolioFeedback responseTarget = messageFeedback != null ? messageFeedback : ratingFeedback;
+        if (responseTarget == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provide at least a rating or a message");
         }
 
-        return FeedbackSubmissionResponse.builder()
-                .id(saved.getId())
-                .rating(saved.getRating())
-                .message(saved.getMessage())
-                .updatedExisting(updatedExisting)
-                .messageStored(hasText(saved.getMessage()))
-                .createdAt(saved.getCreatedAt())
-                .updatedAt(saved.getUpdatedAt())
-                .build();
+        return toSubmissionResponse(responseTarget, messageFeedback == null && ratingUpdatedExisting);
     }
 
     @Transactional
     public FeedbackSubmissionResponse submitPublicPlatformFeedback(
             String username,
             FeedbackSubmitRequest request,
-            String visitorToken,
-            HttpServletRequest httpRequest
+            String visitorToken
     ) {
         User owner = findUserByUsername(username);
-        String clientIp = resolveClientIp(httpRequest);
-        String tokenHash = visitorTokenHash(visitorToken, clientIp);
+        PlatformFeedback ratingFeedback = null;
+        PlatformFeedback messageFeedback = null;
+        boolean ratingUpdatedExisting = false;
 
-        PlatformFeedback feedback = platformFeedbackRepository
-                .findByPortfolioOwnerIdAndVisitorTokenHashAndSourceType(owner.getId(), tokenHash, PUBLIC_VISITOR_SOURCE)
-                .orElseGet(() -> PlatformFeedback.builder()
-                        .portfolioOwner(owner)
-                        .sourceType(PUBLIC_VISITOR_SOURCE)
-                        .visitorTokenHash(tokenHash)
-                        .build());
-
-        boolean updatedExisting = feedback.getId() != null;
-
-        feedback.setVisitorIp(hashIdentifier("ip", clientIp));
         if (request.getRating() != null) {
-            feedback.setRating(request.getRating());
+            String tokenHash = visitorTokenHash(visitorToken);
+            ratingFeedback = platformFeedbackRepository
+                    .findByPortfolioOwnerIdAndVisitorTokenHashAndSourceType(owner.getId(), tokenHash, PUBLIC_VISITOR_SOURCE)
+                    .orElseGet(() -> PlatformFeedback.builder()
+                            .portfolioOwner(owner)
+                            .sourceType(PUBLIC_VISITOR_SOURCE)
+                            .visitorTokenHash(tokenHash)
+                            .build());
+            ratingUpdatedExisting = ratingFeedback.getId() != null;
+            ratingFeedback.setRating(request.getRating());
+            ratingFeedback = platformFeedbackRepository.save(ratingFeedback);
         }
+
         if (hasText(request.getMessage())) {
-            feedback.setMessage(clean(request.getMessage()));
+            messageFeedback = platformFeedbackRepository.save(
+                    PlatformFeedback.builder()
+                            .portfolioOwner(owner)
+                            .sourceType(PUBLIC_VISITOR_SOURCE)
+                            .submitterName(cleanName(request.getName()))
+                            .message(clean(request.getMessage()))
+                            .build()
+            );
+            feedbackEmailService.sendPlatformFeedbackNotification("public visitor on @" + owner.getUsername(), messageFeedback);
+        } else if (ratingFeedback != null && !ratingUpdatedExisting) {
+            feedbackEmailService.sendPlatformFeedbackNotification("public visitor on @" + owner.getUsername(), ratingFeedback);
         }
 
-        PlatformFeedback saved = platformFeedbackRepository.save(feedback);
-        feedbackEmailService.sendPlatformFeedbackNotification("public visitor on @" + owner.getUsername(), saved);
+        PlatformFeedback responseTarget = messageFeedback != null ? messageFeedback : ratingFeedback;
+        if (responseTarget == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provide at least a rating or a message");
+        }
 
-        return FeedbackSubmissionResponse.builder()
-                .id(saved.getId())
-                .rating(saved.getRating())
-                .message(saved.getMessage())
-                .updatedExisting(updatedExisting)
-                .messageStored(hasText(saved.getMessage()))
-                .createdAt(saved.getCreatedAt())
-                .updatedAt(saved.getUpdatedAt())
-                .build();
+        return toSubmissionResponse(responseTarget, messageFeedback == null && ratingUpdatedExisting);
     }
 
     @Transactional(readOnly = true)
@@ -171,40 +172,48 @@ public class FeedbackService {
     @Transactional
     public FeedbackSubmissionResponse submitPlatformFeedback(String username, FeedbackSubmitRequest request) {
         User user = findUserByUsername(username);
-
-        PlatformFeedback feedback = platformFeedbackRepository.findBySubmittedByUserId(user.getId())
-                .orElseGet(() -> PlatformFeedback.builder()
-                        .portfolioOwner(user)
-                        .submittedByUser(user)
-                        .sourceType(PORTFOLIO_OWNER_SOURCE)
-                        .build());
-
-        boolean updatedExisting = feedback.getId() != null;
+        PlatformFeedback ratingFeedback = null;
+        PlatformFeedback messageFeedback = null;
+        boolean ratingUpdatedExisting = false;
 
         if (request.getRating() != null) {
-            feedback.setRating(request.getRating());
+            ratingFeedback = platformFeedbackRepository.findBySubmittedByUserId(user.getId())
+                    .orElseGet(() -> PlatformFeedback.builder()
+                            .portfolioOwner(user)
+                            .submittedByUser(user)
+                            .sourceType(PORTFOLIO_OWNER_SOURCE)
+                            .build());
+            ratingUpdatedExisting = ratingFeedback.getId() != null;
+            ratingFeedback.setRating(request.getRating());
+            ratingFeedback = platformFeedbackRepository.save(ratingFeedback);
         }
+
         if (hasText(request.getMessage())) {
-            feedback.setMessage(clean(request.getMessage()));
+            messageFeedback = platformFeedbackRepository.save(
+                    PlatformFeedback.builder()
+                            .portfolioOwner(user)
+                            .sourceType(PORTFOLIO_OWNER_SOURCE)
+                            .submitterName(cleanName(request.getName()))
+                            .message(clean(request.getMessage()))
+                            .build()
+            );
+            feedbackEmailService.sendPlatformFeedbackNotification("portfolio owner @" + user.getUsername(), messageFeedback);
+        } else if (ratingFeedback != null && !ratingUpdatedExisting) {
+            feedbackEmailService.sendPlatformFeedbackNotification("portfolio owner @" + user.getUsername(), ratingFeedback);
         }
 
-        PlatformFeedback saved = platformFeedbackRepository.save(feedback);
-        feedbackEmailService.sendPlatformFeedbackNotification("portfolio owner @" + user.getUsername(), saved);
+        PlatformFeedback responseTarget = messageFeedback != null ? messageFeedback : ratingFeedback;
+        if (responseTarget == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provide at least a rating or a message");
+        }
 
-        return FeedbackSubmissionResponse.builder()
-                .id(saved.getId())
-                .rating(saved.getRating())
-                .message(saved.getMessage())
-                .updatedExisting(updatedExisting)
-                .messageStored(hasText(saved.getMessage()))
-                .createdAt(saved.getCreatedAt())
-                .updatedAt(saved.getUpdatedAt())
-                .build();
+        return toSubmissionResponse(responseTarget, messageFeedback == null && ratingUpdatedExisting);
     }
 
     private ReceivedFeedbackDto toReceivedDto(PortfolioFeedback feedback) {
         return ReceivedFeedbackDto.builder()
                 .id(feedback.getId())
+                .submitterName(displayName(feedback.getSubmitterName()))
                 .rating(feedback.getRating())
                 .message(feedback.getMessage())
                 .submittedAt(feedback.getCreatedAt())
@@ -235,20 +244,11 @@ public class FeedbackService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
     }
 
-    private String resolveClientIp(HttpServletRequest request) {
-        if (request == null) {
-            return "unknown";
+    private String visitorTokenHash(String visitorToken) {
+        if (!hasText(visitorToken)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Visitor token is required");
         }
-        String forwardedFor = trustProxyHeaders ? request.getHeader("X-Forwarded-For") : null;
-        if (hasText(forwardedFor)) {
-            return forwardedFor.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
-
-    private String visitorTokenHash(String visitorToken, String clientIp) {
-        String stableKey = hasText(visitorToken) ? clean(visitorToken) : "ip:" + clean(clientIp);
-        return hashIdentifier("visitor", stableKey);
+        return hashIdentifier("visitor", clean(visitorToken));
     }
 
     private double roundAverage(double value) {
@@ -259,8 +259,41 @@ public class FeedbackService {
         return value == null ? null : value.trim();
     }
 
+    private String cleanName(String value) {
+        String cleaned = clean(value);
+        return hasText(cleaned) ? cleaned : null;
+    }
+
+    private String displayName(String value) {
+        return hasText(value) ? clean(value) : "Anonymous";
+    }
+
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private FeedbackSubmissionResponse toSubmissionResponse(PortfolioFeedback feedback, boolean updatedExisting) {
+        return FeedbackSubmissionResponse.builder()
+                .id(feedback.getId())
+                .rating(feedback.getRating())
+                .message(feedback.getMessage())
+                .updatedExisting(updatedExisting)
+                .messageStored(hasText(feedback.getMessage()))
+                .createdAt(feedback.getCreatedAt())
+                .updatedAt(feedback.getUpdatedAt())
+                .build();
+    }
+
+    private FeedbackSubmissionResponse toSubmissionResponse(PlatformFeedback feedback, boolean updatedExisting) {
+        return FeedbackSubmissionResponse.builder()
+                .id(feedback.getId())
+                .rating(feedback.getRating())
+                .message(feedback.getMessage())
+                .updatedExisting(updatedExisting)
+                .messageStored(hasText(feedback.getMessage()))
+                .createdAt(feedback.getCreatedAt())
+                .updatedAt(feedback.getUpdatedAt())
+                .build();
     }
 
     private String hashIdentifier(String namespace, String value) {

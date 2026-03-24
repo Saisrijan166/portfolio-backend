@@ -35,11 +35,11 @@ public class PortfolioFeedback {
     @JoinColumn(name = "owner_user_id", nullable = false)
     private User owner;
 
-    @Column(name = "visitor_token_hash", nullable = false, length = 64)
+    @Column(name = "visitor_token_hash", length = 64)
     private String visitorTokenHash;
 
-    @Column(name = "visitor_ip", length = 128)
-    private String visitorIp;
+    @Column(name = "submitter_name", length = 120)
+    private String submitterName;
 
     @Column
     private Integer rating;

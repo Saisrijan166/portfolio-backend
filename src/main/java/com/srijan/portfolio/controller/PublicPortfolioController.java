@@ -4,7 +4,6 @@ import com.srijan.portfolio.dto.*;
 import com.srijan.portfolio.service.FeedbackService;
 import com.srijan.portfolio.service.PortfolioService;
 import com.srijan.portfolio.util.ApiResponses;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -116,13 +115,11 @@ public class PublicPortfolioController {
             @Pattern(regexp = USERNAME_PATTERN, message = "Username format is invalid")
             String username,
             @Valid @RequestBody FeedbackSubmitRequest request,
-            @RequestHeader(value = "X-Visitor-Token", required = false) String visitorToken,
-            HttpServletRequest httpRequest) {
+            @RequestHeader(value = "X-Visitor-Token", required = false) String visitorToken) {
         FeedbackSubmissionResponse response = feedbackService.submitPublicPortfolioFeedback(
                 username,
                 request,
-                visitorToken,
-                httpRequest
+                visitorToken
         );
         return ApiResponses.ok(response, "Feedback saved");
     }
@@ -133,13 +130,11 @@ public class PublicPortfolioController {
             @Pattern(regexp = USERNAME_PATTERN, message = "Username format is invalid")
             String username,
             @Valid @RequestBody FeedbackSubmitRequest request,
-            @RequestHeader(value = "X-Visitor-Token", required = false) String visitorToken,
-            HttpServletRequest httpRequest) {
+            @RequestHeader(value = "X-Visitor-Token", required = false) String visitorToken) {
         FeedbackSubmissionResponse response = feedbackService.submitPublicPlatformFeedback(
                 username,
                 request,
-                visitorToken,
-                httpRequest
+                visitorToken
         );
         return ApiResponses.ok(response, "Feedback sent");
     }

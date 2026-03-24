@@ -29,11 +29,13 @@ public class FeedbackEmailService {
         String body = """
                 New public feedback arrived for @%s.
 
+                Submitted by: %s
                 Rating: %s
                 Message: %s
                 Submitted at: %s
                 """.formatted(
                 owner.getUsername(),
+                safeSubmitterName(feedback.getSubmitterName()),
                 safeRating(feedback.getRating()),
                 safe(feedback.getMessage()),
                 feedback.getUpdatedAt()
@@ -46,9 +48,7 @@ public class FeedbackEmailService {
         String ownerContext = feedback.getPortfolioOwner() != null
                 ? "Portfolio owner: @" + feedback.getPortfolioOwner().getUsername()
                 : "Portfolio owner: n/a";
-        String submitterContext = feedback.getSubmittedByUser() != null
-                ? "Submitted by: @" + feedback.getSubmittedByUser().getUsername()
-                : "Submitted by: anonymous visitor";
+        String submitterContext = buildSubmitterContext(feedback);
 
         String body = """
                 Platform feedback received.
@@ -96,5 +96,23 @@ public class FeedbackEmailService {
 
     private String safeRating(Integer value) {
         return value == null ? "No star rating" : value + "/5";
+    }
+
+    private String safeSubmitterName(String value) {
+        return value == null || value.isBlank() ? "Anonymous" : value;
+    }
+
+    private String buildSubmitterContext(PlatformFeedback feedback) {
+        String customName = feedback.getSubmitterName();
+        if (customName != null && !customName.isBlank() && feedback.getSubmittedByUser() != null) {
+            return "Submitted by: %s (@%s)".formatted(customName, feedback.getSubmittedByUser().getUsername());
+        }
+        if (customName != null && !customName.isBlank()) {
+            return "Submitted by: " + customName;
+        }
+        if (feedback.getSubmittedByUser() != null) {
+            return "Submitted by: @" + feedback.getSubmittedByUser().getUsername();
+        }
+        return "Submitted by: Anonymous";
     }
 }

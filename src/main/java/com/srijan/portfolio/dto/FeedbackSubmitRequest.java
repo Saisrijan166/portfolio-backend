@@ -22,6 +22,9 @@ public class FeedbackSubmitRequest {
     @Size(max = 2000, message = "Message must be 2000 characters or fewer")
     private String message;
 
+    @Size(max = 120, message = "Name must be 120 characters or fewer")
+    private String name;
+
     @AssertTrue(message = "Provide at least a rating or a message")
     public boolean isPayloadPresent() {
         return rating != null || (message != null && !message.trim().isEmpty());

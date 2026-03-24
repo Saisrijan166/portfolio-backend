@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ReceivedFeedbackDto {
     private Long id;
+    private String submitterName;
     private Integer rating;
     private String message;
     private LocalDateTime submittedAt;

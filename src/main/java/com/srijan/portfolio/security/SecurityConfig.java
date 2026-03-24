@@ -52,7 +52,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/public/portfolio/*/feedback").permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/public/portfolio/*/feedback",
+                                "/api/public/portfolio/*/feedback/platform"
+                        ).permitAll()
                         .requestMatchers("/api/admin/profile/**", "/api/admin/about/**").authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/me/**").hasAnyRole("USER", "ADMIN")
