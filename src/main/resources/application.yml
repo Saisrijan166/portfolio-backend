@@ -16,9 +16,28 @@ spring:
       hibernate:
         format_sql: true
 
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:true}
+
 server:
   port: 8080
 
 jwt:
   secret: ${JWT_SECRET:4a2s6f8g0h1j3k5l7m9n1b3v5c7x9z1a2s4d6f8g0h2j4k6l8m0n2b4v6c8x0z2}
   accessExpiration: ${JWT_ACCESS_EXPIRATION:86400000} # 24 hours in ms
+
+feedback:
+  hash:
+    secret: ${FEEDBACK_HASH_SECRET:${JWT_SECRET:feedback-default-secret}}
+  mail:
+    from: ${FEEDBACK_MAIL_FROM:${MAIL_USERNAME:no-reply@portfolio.local}}
+    developer-email: ${FEEDBACK_DEVELOPER_EMAIL:dev@yourplatform.com}

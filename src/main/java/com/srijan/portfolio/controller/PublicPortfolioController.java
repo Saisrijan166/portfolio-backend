@@ -1,15 +1,21 @@
 package com.srijan.portfolio.controller;
 
 import com.srijan.portfolio.dto.*;
+import com.srijan.portfolio.service.FeedbackService;
 import com.srijan.portfolio.service.PortfolioService;
 import com.srijan.portfolio.util.ApiResponses;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -23,6 +29,7 @@ public class PublicPortfolioController {
     private static final String USERNAME_PATTERN = "^[a-z0-9][a-z0-9-]{2,30}$";
 
     private final PortfolioService portfolioService;
+    private final FeedbackService feedbackService;
 
     private <T> ResponseEntity<ApiResponse<T>> cachedSuccess(T data, String message) {
         return ResponseEntity.ok()
@@ -101,5 +108,39 @@ public class PublicPortfolioController {
         return data == null && !portfolioService.publicUserExists(username)
                 ? cachedUserNotFound()
                 : cachedSuccess(data, "Contact loaded");
+    }
+
+    @PostMapping("/api/public/portfolio/{username}/feedback")
+    public ResponseEntity<ApiResponse<FeedbackSubmissionResponse>> submitPortfolioFeedback(
+            @PathVariable
+            @Pattern(regexp = USERNAME_PATTERN, message = "Username format is invalid")
+            String username,
+            @Valid @RequestBody FeedbackSubmitRequest request,
+            @RequestHeader(value = "X-Visitor-Token", required = false) String visitorToken,
+            HttpServletRequest httpRequest) {
+        FeedbackSubmissionResponse response = feedbackService.submitPublicPortfolioFeedback(
+                username,
+                request,
+                visitorToken,
+                httpRequest
+        );
+        return ApiResponses.ok(response, "Feedback saved");
+    }
+
+    @PostMapping("/api/public/portfolio/{username}/feedback/platform")
+    public ResponseEntity<ApiResponse<FeedbackSubmissionResponse>> submitPublicPlatformFeedback(
+            @PathVariable
+            @Pattern(regexp = USERNAME_PATTERN, message = "Username format is invalid")
+            String username,
+            @Valid @RequestBody FeedbackSubmitRequest request,
+            @RequestHeader(value = "X-Visitor-Token", required = false) String visitorToken,
+            HttpServletRequest httpRequest) {
+        FeedbackSubmissionResponse response = feedbackService.submitPublicPlatformFeedback(
+                username,
+                request,
+                visitorToken,
+                httpRequest
+        );
+        return ApiResponses.ok(response, "Feedback sent");
     }
 }
