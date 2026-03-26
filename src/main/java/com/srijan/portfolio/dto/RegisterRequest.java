@@ -24,5 +24,9 @@ public class RegisterRequest {
 
     @NotBlank
     @Size(min = 8, max = 72)
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d]).{8,72}$",
+            message = "Password must include uppercase, lowercase, number, and special character"
+    )
     private String password;
 }

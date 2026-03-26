@@ -16,4 +16,8 @@ public class RefreshResponse {
     private String accessToken;
 
     private String refreshToken;
+
+    private String username;
+
+    private Long userId;
 }

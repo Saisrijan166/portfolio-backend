@@ -1,6 +1,5 @@
 package com.srijan.portfolio.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,6 +7,5 @@ import lombok.Setter;
 @Setter
 public class RefreshRequest {
 
-    @NotBlank
     private String refreshToken;
 }

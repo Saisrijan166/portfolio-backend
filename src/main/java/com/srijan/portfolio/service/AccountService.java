@@ -7,6 +7,7 @@ import com.srijan.portfolio.dto.UsernameAvailabilityDto;
 import com.srijan.portfolio.entity.User;
 import com.srijan.portfolio.exception.ConflictException;
 import com.srijan.portfolio.exception.ResourceNotFoundException;
+import com.srijan.portfolio.repository.AuthProviderRepository;
 import com.srijan.portfolio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -21,8 +22,10 @@ import java.util.Locale;
 public class AccountService {
 
     private final UserRepository userRepository;
+    private final AuthProviderRepository authProviderRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final AuthSupportService authSupportService;
 
     @Transactional(readOnly = true)
     public AccountDto getMyAccount(String username) {
@@ -31,7 +34,7 @@ public class AccountService {
 
     @Transactional(readOnly = true)
     public UsernameAvailabilityDto checkUsernameAvailability(String currentUsername, String requestedUsername) {
-        String normalized = normalizeUsername(requestedUsername);
+        String normalized = authSupportService.normalizeUsername(requestedUsername);
         boolean available = normalized.equalsIgnoreCase(currentUsername)
                 || !userRepository.existsByUsernameIgnoreCase(normalized);
 
@@ -44,7 +47,7 @@ public class AccountService {
     @Transactional
     public AccountDto changeUsername(String currentUsername, ChangeUsernameRequest request) {
         User user = findUserByUsername(currentUsername);
-        String normalized = normalizeUsername(request.getUsername());
+        String normalized = authSupportService.normalizeUsername(request.getUsername());
 
         if (user.getUsername().equals(normalized)) {
             return toDto(user);
@@ -69,6 +72,10 @@ public class AccountService {
     public void changePassword(String currentUsername, ChangePasswordRequest request) {
         User user = findUserByUsername(currentUsername);
 
+        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
+            throw new ConflictException("PASSWORD_NOT_SET", "This account does not have a password yet");
+        }
+
         if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
             throw new ConflictException("PASSWORD_UNCHANGED", "New password must be different from the current password");
         }
@@ -82,16 +89,19 @@ public class AccountService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
     }
 
-    private String normalizeUsername(String username) {
-        return username.trim().toLowerCase(Locale.ROOT);
-    }
-
     private AccountDto toDto(User user) {
         return AccountDto.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .role(user.getRole())
+                .emailVerified(user.isEmailVerified())
+                .status(user.getStatus().name())
+                .hasPassword(user.getPasswordHash() != null && !user.getPasswordHash().isBlank())
+                .providers(authProviderRepository.findAllByUserId(user.getId()).stream()
+                        .map(provider -> provider.getProvider().name())
+                        .sorted()
+                        .toList())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

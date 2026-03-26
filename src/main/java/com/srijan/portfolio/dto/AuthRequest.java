@@ -1,7 +1,7 @@
 package com.srijan.portfolio.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,8 +13,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AuthRequest {
     @NotBlank
-    @Pattern(regexp = "^[a-z0-9][a-z0-9-]{2,30}$", message = "Username format is invalid")
+    @Size(max = 100)
     private String username;
+
+    @Size(max = 100)
+    private String identifier;
 
     @NotBlank
     private String password;
