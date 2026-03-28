@@ -29,7 +29,7 @@ public class RefreshToken {
 
     private Instant expiryDate;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
     private boolean revoked = false;
 
@@ -38,7 +38,7 @@ public class RefreshToken {
     private String ipAddress;
 
     @CreationTimestamp
-    @Column(nullable = false, updatable = false)
+    @Column(updatable = false, columnDefinition = "timestamp default current_timestamp")
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)

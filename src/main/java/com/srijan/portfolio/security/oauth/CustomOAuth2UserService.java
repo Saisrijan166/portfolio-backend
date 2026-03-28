@@ -5,12 +5,14 @@ import com.srijan.portfolio.entity.User;
 import com.srijan.portfolio.service.AuthService;
 import com.srijan.portfolio.service.AuthSupportService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -22,31 +24,41 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
-    private final AuthService authService;
+    private final ObjectProvider<AuthService> authServiceProvider;
     private final AuthSupportService authSupportService;
     private final RestClient restClient = RestClient.builder().build();
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        OAuth2User delegate = new DefaultOAuth2UserService().loadUser(userRequest);
-        String registrationId = userRequest.getClientRegistration().getRegistrationId();
-        Map<String, Object> attributes = delegate.getAttributes();
+        try {
+            OAuth2User delegate = new DefaultOAuth2UserService().loadUser(userRequest);
+            String registrationId = userRequest.getClientRegistration().getRegistrationId();
+            Map<String, Object> attributes = delegate.getAttributes();
 
-        OAuthProfile profile = extractProfile(registrationId, attributes, userRequest.getAccessToken().getTokenValue());
-        User user = authService.resolveOrCreateOAuthUser(
-                profile.provider(),
-                profile.providerUserId(),
-                profile.email(),
-                profile.usernameCandidate(),
-                profile.emailVerified()
-        );
+            OAuthProfile profile = extractProfile(registrationId, attributes, userRequest.getAccessToken().getTokenValue());
+            User user = authServiceProvider.getObject().resolveOrCreateOAuthUser(
+                    profile.provider(),
+                    profile.providerUserId(),
+                    profile.email(),
+                    profile.usernameCandidate(),
+                    profile.emailVerified()
+            );
 
-        return new PortfolioOAuth2User(
-                delegate.getAuthorities(),
-                attributes,
-                userRequest.getClientRegistration().getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName(),
-                user
-        );
+            return new PortfolioOAuth2User(
+                    delegate.getAuthorities(),
+                    attributes,
+                    userRequest.getClientRegistration().getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName(),
+                    user
+            );
+        } catch (OAuth2AuthenticationException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("oauth_user_resolution_failed"),
+                    exception.getMessage(),
+                    exception
+            );
+        }
     }
 
     private OAuthProfile extractProfile(String registrationId, Map<String, Object> attributes, String accessToken) {
@@ -59,13 +71,6 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                     authSupportService.normalizeEmail(value(attributes, "email")),
                     firstNonBlank(value(attributes, "email"), value(attributes, "name"), value(attributes, "sub")),
                     Boolean.TRUE.equals(attributes.get("email_verified"))
-            );
-            case LINKEDIN -> new OAuthProfile(
-                    provider,
-                    value(attributes, "sub"),
-                    authSupportService.normalizeEmail(value(attributes, "email")),
-                    firstNonBlank(value(attributes, "name"), value(attributes, "email"), value(attributes, "sub")),
-                    true
             );
             case GITHUB -> {
                 String email = authSupportService.normalizeEmail(value(attributes, "email"));

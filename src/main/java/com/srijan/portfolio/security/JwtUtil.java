@@ -23,10 +23,16 @@ public class JwtUtil {
     }
 
     public String generateAccessToken(String username, String role) {
+        return generateAccessToken(username, role, null, null);
+    }
+
+    public String generateAccessToken(String username, String role, Long userId, String tenantKey) {
 
         return Jwts.builder()
-                .subject(username)  
+                .subject(username)
                 .claim("role", role)
+                .claim("userId", userId)
+                .claim("tenantKey", tenantKey)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessExpiration))
                 .signWith(getSigningKey())

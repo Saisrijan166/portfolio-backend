@@ -1,5 +1,6 @@
 package com.srijan.portfolio.tenant;
 
+import com.srijan.portfolio.util.EnvironmentUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import org.springframework.stereotype.Component;
@@ -31,7 +32,7 @@ public class TenantFilter extends OncePerRequestFilter {
     );
 
     private static final List<String> ROOT_DOMAINS = parseRootDomains(
-            System.getenv("TENANT_ROOT_DOMAINS")
+            EnvironmentUtils.get("TENANT_ROOT_DOMAINS")
     );
 
     @Override
@@ -105,6 +106,10 @@ public class TenantFilter extends OncePerRequestFilter {
             path = path.substring(contextPath.length());
         }
 
+        if (path.startsWith("/api/")) {
+            return null;
+        }
+
         String[] segments = path.split("/");
         for (String segment : segments) {
             if (segment == null || segment.isEmpty()) {
@@ -112,7 +117,9 @@ public class TenantFilter extends OncePerRequestFilter {
             }
 
             String candidate = segment.toLowerCase();
-            return isValidTenant(candidate) ? candidate : null;
+            if (isValidTenant(candidate)) {
+                return candidate;
+            }
         }
 
         return null;

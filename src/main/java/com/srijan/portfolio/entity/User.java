@@ -34,12 +34,12 @@ public class User {
     @Column(nullable = false)
     private String role; // e.g. "ROLE_USER", "ROLE_ADMIN"
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
     private boolean isEmailVerified = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 16)
+    @Column(nullable = false, length = 16, columnDefinition = "varchar(16) default 'ACTIVE'")
     @Builder.Default
     private UserStatus status = UserStatus.ACTIVE;
 

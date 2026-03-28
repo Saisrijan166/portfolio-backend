@@ -4,6 +4,7 @@ import com.srijan.portfolio.tenant.TenantFilter;
 import com.srijan.portfolio.security.oauth.CustomOAuth2UserService;
 import com.srijan.portfolio.security.oauth.OAuth2AuthenticationFailureHandler;
 import com.srijan.portfolio.security.oauth.OAuth2AuthenticationSuccessHandler;
+import com.srijan.portfolio.util.EnvironmentUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +17,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -39,6 +39,7 @@ public class SecurityConfig {
     private final JsonAuthenticationEntryPoint jsonAuthenticationEntryPoint;
     private final JsonAccessDeniedHandler jsonAccessDeniedHandler;
     private final UserDetailsService userDetailsService;
+    private final PasswordEncoder passwordEncoder;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oauth2AuthenticationSuccessHandler;
     private final OAuth2AuthenticationFailureHandler oauth2AuthenticationFailureHandler;
@@ -105,7 +106,7 @@ public class SecurityConfig {
     }
 
     private List<String> resolveAllowedOriginPatterns() {
-        String raw = System.getenv("CORS_ALLOWED_ORIGIN_PATTERNS");
+        String raw = EnvironmentUtils.get("CORS_ALLOWED_ORIGIN_PATTERNS");
         if (raw == null || raw.isBlank()) {
             return List.of(
                     "http://localhost:*",
@@ -127,7 +128,7 @@ public class SecurityConfig {
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
+        authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }
 
@@ -136,8 +137,4 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
 }

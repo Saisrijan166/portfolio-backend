@@ -5,6 +5,8 @@ import com.srijan.portfolio.dto.AuthRequest;
 import com.srijan.portfolio.dto.AuthResponse;
 import com.srijan.portfolio.dto.OtpRequestDto;
 import com.srijan.portfolio.dto.OtpVerifyRequestDto;
+import com.srijan.portfolio.dto.PasswordResetConfirmRequest;
+import com.srijan.portfolio.dto.PasswordResetRequest;
 import com.srijan.portfolio.dto.RefreshRequest;
 import com.srijan.portfolio.dto.RefreshResponse;
 import com.srijan.portfolio.dto.RegisterRequest;
@@ -70,6 +72,18 @@ public class AuthController {
         );
         refreshTokenCookieService.writeRefreshTokenCookie(httpResponse, response.getRefreshToken());
         return ApiResponses.ok(response, "OTP verified");
+    }
+
+    @PostMapping("/password/forgot")
+    public ResponseEntity<ApiResponse<Void>> requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
+        emailOtpService.sendPasswordResetOtp(request);
+        return ApiResponses.ok(null, "If the email exists, a reset code has been sent");
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        emailOtpService.resetPassword(request);
+        return ApiResponses.ok(null, "Password reset successful");
     }
 
     @PostMapping("/refresh")

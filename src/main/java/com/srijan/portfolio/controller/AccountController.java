@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -53,10 +54,14 @@ public class AccountController {
     }
 
     @PutMapping("/password")
-    public ResponseEntity<ApiResponse<Void>> changePassword(
+    public ResponseEntity<ApiResponse<AccountDto>> changePassword(
             Authentication auth,
             @Valid @RequestBody ChangePasswordRequest request) {
-        accountService.changePassword(auth.getName(), request);
-        return ApiResponses.ok(null, "Password updated");
+        return ApiResponses.ok(accountService.changePassword(auth.getName(), request), "Password updated");
+    }
+
+    @PostMapping("/email/verify")
+    public ResponseEntity<ApiResponse<AccountDto>> markEmailVerified(Authentication auth) {
+        return ApiResponses.ok(accountService.markEmailVerified(auth.getName()), "Email marked as verified");
     }
 }

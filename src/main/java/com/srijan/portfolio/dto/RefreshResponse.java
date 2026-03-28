@@ -20,4 +20,10 @@ public class RefreshResponse {
     private String username;
 
     private Long userId;
+
+    private String email;
+
+    private boolean emailVerified;
+
+    private String tenantKey;
 }

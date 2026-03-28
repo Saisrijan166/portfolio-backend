@@ -1,22 +1,23 @@
 package com.srijan.portfolio.service;
 
+import com.srijan.portfolio.email.EmailService;
 import com.srijan.portfolio.entity.PlatformFeedback;
 import com.srijan.portfolio.entity.PortfolioFeedback;
 import com.srijan.portfolio.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class FeedbackEmailService {
 
-    private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final EmailService emailService;
 
     @Value("${feedback.mail.from:no-reply@portfolio.local}")
     private String fromAddress;
@@ -25,66 +26,56 @@ public class FeedbackEmailService {
     private String developerEmail;
 
     public void sendPortfolioFeedbackNotification(User owner, PortfolioFeedback feedback) {
-        String subject = "New portfolio feedback for @" + owner.getUsername();
-        String body = """
-                New public feedback arrived for @%s.
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put("Portfolio", "@" + owner.getUsername());
+        details.put("Submitted by", safeSubmitterName(feedback.getSubmitterName()));
+        details.put("Rating", safeRating(feedback.getRating()));
+        details.put("Message", safe(feedback.getMessage()));
+        details.put("Submitted at", String.valueOf(feedback.getUpdatedAt()));
 
-                Submitted by: %s
-                Rating: %s
-                Message: %s
-                Submitted at: %s
-                """.formatted(
-                owner.getUsername(),
-                safeSubmitterName(feedback.getSubmitterName()),
-                safeRating(feedback.getRating()),
-                safe(feedback.getMessage()),
-                feedback.getUpdatedAt()
+        send(
+                owner.getEmail(),
+                "New portfolio feedback for @" + owner.getUsername(),
+                "New portfolio feedback received",
+                "A new public feedback submission was received for your portfolio.",
+                details
         );
-
-        send(owner.getEmail(), subject, body);
     }
 
     public void sendPlatformFeedbackNotification(String subjectContext, PlatformFeedback feedback) {
-        String ownerContext = feedback.getPortfolioOwner() != null
-                ? "Portfolio owner: @" + feedback.getPortfolioOwner().getUsername()
-                : "Portfolio owner: n/a";
-        String submitterContext = buildSubmitterContext(feedback);
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put("Context", subjectContext);
+        details.put("Portfolio owner", feedback.getPortfolioOwner() != null ? "@" + feedback.getPortfolioOwner().getUsername() : "n/a");
+        details.put("Submitted by", buildSubmitterContext(feedback));
+        details.put("Rating", safeRating(feedback.getRating()));
+        details.put("Message", safe(feedback.getMessage()));
+        details.put("Updated at", String.valueOf(feedback.getUpdatedAt()));
 
-        String body = """
-                Platform feedback received.
-
-                Context: %s
-                %s
-                %s
-                Rating: %s
-                Message: %s
-                Updated at: %s
-                """.formatted(
-                subjectContext,
-                ownerContext,
-                submitterContext,
-                safeRating(feedback.getRating()),
-                safe(feedback.getMessage()),
-                feedback.getUpdatedAt()
+        send(
+                developerEmail,
+                "Platform feedback: " + subjectContext,
+                "Platform feedback received",
+                "A new platform feedback message was submitted from the application.",
+                details
         );
-
-        send(developerEmail, "Platform feedback: " + subjectContext, body);
     }
 
-    private void send(String to, String subject, String body) {
-        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
-        if (mailSender == null || to == null || to.isBlank()) {
-            log.info("Mail delivery skipped subject={} to={} body={}", subject, to, body);
+    private void send(String to, String subject, String title, String intro, Map<String, String> details) {
+        if (to == null || to.isBlank()) {
+            log.info("Mail delivery skipped subject={} to={}", subject, to);
             return;
         }
 
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromAddress);
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(body);
-            mailSender.send(message);
+            emailService.sendNotificationEmail(
+                    to,
+                    subject,
+                    title,
+                    intro,
+                    details,
+                    "This notification was generated automatically from " + fromAddress + ".",
+                    null
+            );
         } catch (Exception exception) {
             log.warn("Failed to send feedback email subject={} to={}", subject, to, exception);
         }
@@ -105,14 +96,14 @@ public class FeedbackEmailService {
     private String buildSubmitterContext(PlatformFeedback feedback) {
         String customName = feedback.getSubmitterName();
         if (customName != null && !customName.isBlank() && feedback.getSubmittedByUser() != null) {
-            return "Submitted by: %s (@%s)".formatted(customName, feedback.getSubmittedByUser().getUsername());
+            return "%s (@%s)".formatted(customName, feedback.getSubmittedByUser().getUsername());
         }
         if (customName != null && !customName.isBlank()) {
-            return "Submitted by: " + customName;
+            return customName;
         }
         if (feedback.getSubmittedByUser() != null) {
-            return "Submitted by: @" + feedback.getSubmittedByUser().getUsername();
+            return "@" + feedback.getSubmittedByUser().getUsername();
         }
-        return "Submitted by: Anonymous";
+        return "Anonymous";
     }
 }
