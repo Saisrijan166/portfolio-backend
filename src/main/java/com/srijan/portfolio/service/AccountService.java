@@ -29,6 +29,7 @@ public class AccountService {
     private final RefreshTokenService refreshTokenService;
     private final EmailService emailService;
     private final AuthSupportService authSupportService;
+    private final com.srijan.portfolio.email.TenantBrandingResolver tenantBrandingResolver;
 
     @Transactional(readOnly = true)
     public AccountDto getMyAccount(String username) {
@@ -140,7 +141,8 @@ public class AccountService {
         }
 
         try {
-            emailService.sendPasswordChangedEmail(user.getEmail(), false, null);
+            com.srijan.portfolio.email.TenantEmailContext context = tenantBrandingResolver.resolve(user.getUsername());
+            emailService.sendPasswordChangedEmail(user.getEmail(), false, context);
         } catch (Exception ignored) {
         }
     }
@@ -151,7 +153,8 @@ public class AccountService {
         }
 
         try {
-            emailService.sendUsernameChangedEmail(user.getEmail(), oldUsername, newUsername, null);
+            com.srijan.portfolio.email.TenantEmailContext context = tenantBrandingResolver.resolve(user.getUsername());
+            emailService.sendUsernameChangedEmail(user.getEmail(), oldUsername, newUsername, context);
         } catch (Exception ignored) {
         }
     }

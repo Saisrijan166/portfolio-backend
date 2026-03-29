@@ -33,8 +33,7 @@ public class TenantBrandingResolver {
         String fromEmail = firstNonBlank(
                 EnvironmentUtils.get("MAIL_FROM_EMAIL"),
                 EnvironmentUtils.get("MAIL_USERNAME"),
-                EnvironmentUtils.get("SMTP_USERNAME"),
-                "no-reply@portfolio.local"
+                "no-reply@srijanos.com"
         );
 
         return TenantEmailContext.builder()

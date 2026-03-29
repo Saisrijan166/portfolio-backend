@@ -56,7 +56,11 @@ public class AuthSupportService {
     }
 
     public String generateAvailableUsername(String preferredValue, String fallbackPrefix) {
-        String base = slugify(preferredValue);
+        String baseValue = preferredValue;
+        if (baseValue != null && baseValue.contains("@")) {
+            baseValue = baseValue.substring(0, baseValue.indexOf('@'));
+        }
+        String base = slugify(baseValue);
         if (base == null || base.isBlank()) {
             base = slugify(fallbackPrefix);
         }

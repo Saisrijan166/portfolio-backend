@@ -18,8 +18,7 @@ import java.util.Map;
 public class FeedbackEmailService {
 
     private final EmailService emailService;
-
-    @Value("${feedback.mail.from:no-reply@portfolio.local}")
+    @Value("${feedback.mail.from:no-reply@srijanos.com}")
     private String fromAddress;
 
     @Value("${feedback.mail.developer-email:dev@yourplatform.com}")

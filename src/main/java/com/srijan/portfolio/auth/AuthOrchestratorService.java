@@ -43,6 +43,7 @@ public class AuthOrchestratorService {
     private final EmailOtpService emailOtpService;
     private final EmailService emailService;
     private final AuthSupportService authSupportService;
+    private final com.srijan.portfolio.email.TenantBrandingResolver tenantBrandingResolver;
 
     @Transactional
     public AuthResponse register(RegisterRequest request, String deviceInfo, String ipAddress) {
@@ -280,7 +281,8 @@ public class AuthOrchestratorService {
         }
 
         try {
-            emailService.sendLoginAlert(user.getEmail(), method, ipAddress, deviceInfo, null);
+            com.srijan.portfolio.email.TenantEmailContext context = tenantBrandingResolver.resolve(user.getUsername());
+            emailService.sendLoginAlert(user.getEmail(), method, ipAddress, deviceInfo, context);
         } catch (Exception ignored) {
         }
     }

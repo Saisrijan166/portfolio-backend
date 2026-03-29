@@ -36,6 +36,7 @@ public class EmailOtpService {
     private final EmailService emailService;
     private final AuthSupportService authSupportService;
     private final RefreshTokenService refreshTokenService;
+    private final com.srijan.portfolio.email.TenantBrandingResolver tenantBrandingResolver;
 
     private final SecureRandom random = new SecureRandom();
 
@@ -157,6 +158,10 @@ public class EmailOtpService {
     }
 
     private void sendOtpMail(String email, String otp, EmailOtpPurpose purpose) {
+        com.srijan.portfolio.email.TenantEmailContext tenantContext = userRepository.findByEmailIgnoreCase(email)
+                .map(u -> tenantBrandingResolver.resolve(u.getUsername()))
+                .orElse(null);
+
         try {
             if (purpose == EmailOtpPurpose.RESET_PASSWORD) {
                 emailService.sendOtpEmail(
@@ -166,7 +171,7 @@ public class EmailOtpService {
                         "Reset Your Password",
                         "Password reset code - PortfolioOS",
                         "Use the code below to reset your password and continue securely.",
-                        null
+                        tenantContext
                 );
                 return;
             }
@@ -178,7 +183,7 @@ public class EmailOtpService {
                     "Your Login Verification Code",
                     "Login verification code - PortfolioOS",
                     "Use the code below to continue.",
-                    null
+                    tenantContext
             );
         } catch (Exception exception) {
             log.warn("Failed to send OTP email purpose={} to={}", purpose, email, exception);

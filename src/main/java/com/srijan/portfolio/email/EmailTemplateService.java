@@ -27,6 +27,15 @@ public class EmailTemplateService {
 
         safeVariables.put("APP_NAME", escape(tenantContext.appName()));
         safeVariables.put("APP_URL", escape(tenantContext.appUrl()));
+        
+        String tKey = tenantContext.tenantKey();
+        if (tKey != null && !tKey.isBlank()) {
+            safeVariables.put("DASHBOARD_URL", escape(tenantContext.appUrl() + "/dashboard/" + tKey));
+            safeVariables.put("PORTFOLIO_URL", escape(tenantContext.appUrl() + "/" + tKey));
+        } else {
+            safeVariables.put("DASHBOARD_URL", escape(tenantContext.appUrl() + "/login"));
+            safeVariables.put("PORTFOLIO_URL", escape(tenantContext.appUrl()));
+        }
         safeVariables.put("SUPPORT_EMAIL", escape(tenantContext.supportEmail()));
         safeVariables.put("PRIMARY_COLOR", escape(tenantContext.primaryColor()));
         safeVariables.put("ACCENT_COLOR", escape(tenantContext.accentColor()));

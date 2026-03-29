@@ -30,8 +30,8 @@ spring:
 
 mailing:
   from-name: ${MAIL_FROM_NAME:${APP_NAME:PortfolioOS}}
-  from-email: ${MAIL_FROM_EMAIL:${MAIL_USERNAME:${SMTP_USERNAME:no-reply@portfolio.local}}}
-  support-email: ${SUPPORT_EMAIL:${MAIL_FROM_EMAIL:${MAIL_USERNAME:${SMTP_USERNAME:no-reply@portfolio.local}}}}
+  from-email: ${MAIL_FROM_EMAIL:${MAIL_USERNAME:${SMTP_USERNAME:no-reply@srijanos.com}}}
+  support-email: ${SUPPORT_EMAIL:${MAIL_FROM_EMAIL:${MAIL_USERNAME:${SMTP_USERNAME:no-reply@srijanos.com}}}}
   app-url: ${APP_URL:http://localhost:3000}
   primary-color: ${EMAIL_PRIMARY_COLOR:#111827}
   accent-color: ${EMAIL_ACCENT_COLOR:#f97316}
@@ -58,11 +58,11 @@ auth:
     expiry-minutes: ${AUTH_OTP_EXPIRY_MINUTES:5}
     max-attempts: ${AUTH_OTP_MAX_ATTEMPTS:5}
     resend-cooldown-seconds: ${AUTH_OTP_RESEND_COOLDOWN_SECONDS:45}
-    mail-from: ${AUTH_OTP_MAIL_FROM:${MAIL_FROM_EMAIL:${MAIL_USERNAME:no-reply@portfolio.local}}}
+    mail-from: ${AUTH_OTP_MAIL_FROM:${MAIL_FROM_EMAIL:${MAIL_USERNAME:no-reply@srijanos.com}}}
 
 feedback:
   hash:
     secret: ${FEEDBACK_HASH_SECRET:${JWT_SECRET:feedback-default-secret}}
   mail:
-    from: ${FEEDBACK_MAIL_FROM:${MAIL_FROM_EMAIL:${MAIL_USERNAME:no-reply@portfolio.local}}}
+    from: ${FEEDBACK_MAIL_FROM:${MAIL_FROM_EMAIL:${MAIL_USERNAME:no-reply@srijanos.com}}}
     developer-email: ${FEEDBACK_DEVELOPER_EMAIL:dev@yourplatform.com}
