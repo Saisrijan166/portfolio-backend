@@ -9,6 +9,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import static com.srijan.portfolio.validation.PasswordValidation.PASSWORD_MESSAGE;
+import static com.srijan.portfolio.validation.PasswordValidation.PASSWORD_PATTERN;
+
 @Data
 @Builder
 @AllArgsConstructor
@@ -25,8 +28,8 @@ public class RegisterRequest {
     @NotBlank
     @Size(min = 8, max = 72)
     @Pattern(
-            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d]).{8,72}$",
-            message = "Password must include uppercase, lowercase, number, and special character"
+            regexp = PASSWORD_PATTERN,
+            message = PASSWORD_MESSAGE
     )
     private String password;
 }
