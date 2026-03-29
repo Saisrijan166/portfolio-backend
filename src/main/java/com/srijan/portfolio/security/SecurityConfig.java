@@ -2,6 +2,7 @@ package com.srijan.portfolio.security;
 
 import com.srijan.portfolio.tenant.TenantFilter;
 import com.srijan.portfolio.security.oauth.CustomOAuth2UserService;
+import com.srijan.portfolio.security.oauth.CustomOidcUserService;
 import com.srijan.portfolio.security.oauth.OAuth2AuthenticationFailureHandler;
 import com.srijan.portfolio.security.oauth.OAuth2AuthenticationSuccessHandler;
 import com.srijan.portfolio.util.EnvironmentUtils;
@@ -41,6 +42,7 @@ public class SecurityConfig {
     private final UserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOidcUserService customOidcUserService;
     private final OAuth2AuthenticationSuccessHandler oauth2AuthenticationSuccessHandler;
     private final OAuth2AuthenticationFailureHandler oauth2AuthenticationFailureHandler;
 
@@ -73,7 +75,10 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(endpoint -> endpoint.baseUri("/api/auth/oauth"))
                         .redirectionEndpoint(endpoint -> endpoint.baseUri("/api/auth/oauth/*/callback"))
-                        .userInfoEndpoint(endpoint -> endpoint.userService(customOAuth2UserService))
+                        .userInfoEndpoint(endpoint -> endpoint
+                                .userService(customOAuth2UserService)
+                                .oidcUserService(customOidcUserService)
+                        )
                         .successHandler(oauth2AuthenticationSuccessHandler)
                         .failureHandler(oauth2AuthenticationFailureHandler)
                 )

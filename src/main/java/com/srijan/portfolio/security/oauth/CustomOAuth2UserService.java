@@ -67,7 +67,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         return switch (provider) {
             case GOOGLE -> new OAuthProfile(
                     provider,
-                    value(attributes, "sub"),
+                    requiredValue(attributes, "sub", "Google"),
                     authSupportService.normalizeEmail(value(attributes, "email")),
                     firstNonBlank(value(attributes, "email"), value(attributes, "name"), value(attributes, "sub")),
                     Boolean.TRUE.equals(attributes.get("email_verified"))
@@ -79,7 +79,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                 }
                 yield new OAuthProfile(
                         provider,
-                        String.valueOf(attributes.get("id")),
+                        requiredValue(attributes, "id", "GitHub"),
                         email,
                         firstNonBlank(value(attributes, "login"), value(attributes, "name"), String.valueOf(attributes.get("id"))),
                         email != null
@@ -124,6 +124,17 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     private String value(Map<String, Object> attributes, String key) {
         Object value = attributes.get(key);
         return value == null ? null : value.toString();
+    }
+
+    private String requiredValue(Map<String, Object> attributes, String key, String providerName) {
+        String value = value(attributes, key);
+        if (value == null || value.isBlank()) {
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("oauth_profile_incomplete"),
+                    providerName + " account did not provide required profile information"
+            );
+        }
+        return value;
     }
 
     private record OAuthProfile(

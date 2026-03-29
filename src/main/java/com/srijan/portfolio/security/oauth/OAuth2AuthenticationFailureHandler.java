@@ -24,9 +24,17 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
             AuthenticationException exception
     ) throws IOException, ServletException {
         String redirectUrl = UriComponentsBuilder.fromUriString(frontendFailureUrl)
-                .queryParam("authError", exception.getMessage())
-                .build(true)
+                .queryParam("authError", resolveErrorMessage(exception))
+                .build()
+                .encode()
                 .toUriString();
         response.sendRedirect(redirectUrl);
+    }
+
+    private String resolveErrorMessage(AuthenticationException exception) {
+        String message = exception.getMessage();
+        return message == null || message.isBlank()
+                ? "OAuth authentication failed"
+                : message;
     }
 }

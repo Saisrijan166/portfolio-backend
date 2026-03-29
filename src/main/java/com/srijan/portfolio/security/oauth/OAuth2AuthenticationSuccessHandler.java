@@ -52,8 +52,9 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             response.sendRedirect(redirectUrl);
         } catch (Exception exception) {
             String redirectUrl = UriComponentsBuilder.fromUriString(frontendFailureUrl)
-                    .queryParam("authError", exception.getMessage())
-                    .build(true)
+                    .queryParam("authError", resolveErrorMessage(exception))
+                    .build()
+                    .encode()
                     .toUriString();
             response.sendRedirect(redirectUrl);
         }
@@ -70,5 +71,12 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             return "GitHub";
         }
         return "OAuth";
+    }
+
+    private String resolveErrorMessage(Exception exception) {
+        String message = exception.getMessage();
+        return message == null || message.isBlank()
+                ? "OAuth authentication failed"
+                : message;
     }
 }
