@@ -18,11 +18,13 @@ import static com.srijan.portfolio.validation.PasswordValidation.PASSWORD_PATTER
 @NoArgsConstructor
 public class RegisterRequest {
     @NotBlank
+    @Size(max = 31)
     @Pattern(regexp = "^[a-z0-9][a-z0-9-]{2,30}$", message = "Username must be 3-31 chars using lowercase letters, numbers, or hyphens")
     private String username;
 
     @NotBlank
     @Email
+    @Size(max = 255)
     private String email;
 
     @NotBlank
