@@ -8,6 +8,7 @@ import org.springframework.web.util.HtmlUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Year;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -81,6 +82,20 @@ public class EmailTemplateService {
                     """.formatted(HtmlUtils.htmlEscape(paragraph)));
         }
         return builder.toString();
+    }
+
+    public String renderTextBlock(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+
+        return Arrays.stream(value.trim().split("(?:\\r?\\n){2,}"))
+                .map(String::trim)
+                .filter(paragraph -> !paragraph.isBlank())
+                .map(paragraph -> """
+                        <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.7; color: #374151;">%s</p>
+                        """.formatted(HtmlUtils.htmlEscape(paragraph).replace("\r\n", "\n").replace("\n", "<br />")))
+                .reduce("", String::concat);
     }
 
     private String buildLogoSection(TenantEmailContext tenantContext) {

@@ -100,6 +100,31 @@ public class EmailService {
         );
     }
 
+    public void sendContactMessageEmail(
+            String to,
+            String portfolioUsername,
+            String subjectLine,
+            String message,
+            TenantEmailContext tenantContext
+    ) {
+        sendTemplatedEmail(
+                to,
+                "New contact message: " + safe(subjectLine) + " - PortfolioOS",
+                "contact-message-email",
+                Map.of(
+                        "PREHEADER", "New contact message for @" + safe(portfolioUsername),
+                        "TITLE", "New contact message received",
+                        "INTRO_HTML", emailTemplateService.renderParagraphs(
+                                "A visitor sent you a message through your public PortfolioOS contact app."
+                        ),
+                        "CONTACT_SUBJECT", safe(subjectLine),
+                        "CONTACT_MESSAGE_HTML", emailTemplateService.renderTextBlock(message),
+                        "PORTFOLIO_USERNAME", safe(portfolioUsername)
+                ),
+                tenantContext
+        );
+    }
+
     public void sendLoginAlert(String to, String loginMethod, String ipAddress, String deviceInfo, TenantEmailContext tenantContext) {
         Map<String, String> details = new LinkedHashMap<>();
         details.put("Sign-in method", safe(loginMethod));

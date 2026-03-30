@@ -65,7 +65,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/public/portfolio/*/feedback",
-                                "/api/public/portfolio/*/feedback/platform"
+                                "/api/public/portfolio/*/feedback/platform",
+                                "/api/public/portfolio/*/contact/message"
                         ).permitAll()
                         .requestMatchers("/api/admin/profile/**", "/api/admin/about/**").authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

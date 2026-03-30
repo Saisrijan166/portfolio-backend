@@ -1,6 +1,7 @@
 package com.srijan.portfolio.controller;
 
 import com.srijan.portfolio.dto.*;
+import com.srijan.portfolio.service.ContactEmailService;
 import com.srijan.portfolio.service.FeedbackService;
 import com.srijan.portfolio.service.PortfolioService;
 import com.srijan.portfolio.util.ApiResponses;
@@ -29,6 +30,7 @@ public class PublicPortfolioController {
 
     private final PortfolioService portfolioService;
     private final FeedbackService feedbackService;
+    private final ContactEmailService contactEmailService;
 
     private <T> ResponseEntity<ApiResponse<T>> cachedSuccess(T data, String message) {
         return ResponseEntity.ok()
@@ -137,5 +139,15 @@ public class PublicPortfolioController {
                 visitorToken
         );
         return ApiResponses.ok(response, "Feedback sent");
+    }
+
+    @PostMapping("/api/public/portfolio/{username}/contact/message")
+    public ResponseEntity<ApiResponse<Void>> sendPublicContactMessage(
+            @PathVariable
+            @Pattern(regexp = USERNAME_PATTERN, message = "Username format is invalid")
+            String username,
+            @Valid @RequestBody ContactMessageRequest request) {
+        contactEmailService.sendPublicContactMessage(username, request);
+        return ApiResponses.ok(null, "Message sent");
     }
 }
