@@ -786,7 +786,8 @@ public class InternalResumeParser {
 
     private void applyExperienceDates(ParsedExperience.ParsedExperienceBuilder builder, String line) {
         Matcher yearRange = YEAR_RANGE_PATTERN.matcher(line);
-        if (yearRange.find()) {
+        boolean hasYearRange = yearRange.find();
+        if (hasYearRange) {
             try {
                 builder.startYear(Integer.parseInt(yearRange.group(1)));
                 String end = yearRange.group(2);
@@ -828,7 +829,7 @@ public class InternalResumeParser {
             builder.endMonth(endMonth);
             builder.endYear(endYear);
         }
-        if (builder.build().getDuration() == null && (startMonth != null || yearRange.find())) {
+        if (builder.build().getDuration() == null && (startMonth != null || hasYearRange)) {
             builder.duration(line.trim());
         }
     }

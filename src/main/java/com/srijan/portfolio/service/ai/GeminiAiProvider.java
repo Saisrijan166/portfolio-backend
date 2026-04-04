@@ -51,17 +51,7 @@ public class GeminiAiProvider implements AiProvider {
   public ResumeParseResponseDto parseResume(byte[] fileBytes, String fileType, String extractedText)
       throws IOException {
     String base64Data = Base64.getEncoder().encodeToString(fileBytes);
-
-    String mimeType;
-    if (fileType == null) {
-      mimeType = "application/pdf";
-    } else {
-      mimeType = switch (fileType.toLowerCase()) {
-        case "pdf" -> "application/pdf";
-        case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-        default -> "application/pdf";
-      };
-    }
+    String mimeType = resolveMimeType(fileType);
 
     String requestJson = buildGeminiRequest(base64Data, mimeType);
 
@@ -158,7 +148,7 @@ public class GeminiAiProvider implements AiProvider {
       }
 
       // Clean up in case Gemini wraps in markdown
-      jsonText = jsonText.replaceAll("(?s)```json\\s*", "").replaceAll("(?s)```\\s*$", "").trim();
+      jsonText = stripMarkdownCodeFence(jsonText);
 
       ResumeParseResponseDto result = objectMapper.readValue(jsonText, ResumeParseResponseDto.class);
       result.setProvider("gemini");
@@ -168,5 +158,24 @@ public class GeminiAiProvider implements AiProvider {
     } catch (Exception e) {
       throw new IOException("Failed to parse Gemini response: " + e.getMessage(), e);
     }
+  }
+
+  private String resolveMimeType(String fileType) throws IOException {
+    if (fileType == null || fileType.isBlank()) {
+      throw new IOException("Missing file type for Gemini resume parsing");
+    }
+
+    return switch (fileType.toLowerCase().trim()) {
+      case "pdf" -> "application/pdf";
+      case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      default -> throw new IOException("Unsupported file type for Gemini resume parsing: " + fileType);
+    };
+  }
+
+  private String stripMarkdownCodeFence(String value) {
+    return value
+        .replaceFirst("(?s)^```(?:json)?\\s*", "")
+        .replaceFirst("(?s)\\s*```\\s*$", "")
+        .trim();
   }
 }

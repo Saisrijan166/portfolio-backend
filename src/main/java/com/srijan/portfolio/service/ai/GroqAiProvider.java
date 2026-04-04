@@ -148,7 +148,7 @@ public class GroqAiProvider implements AiProvider {
             }
 
             // Clean up markdown wrapping if present
-            jsonText = jsonText.replaceAll("(?s)```json\\s*", "").replaceAll("(?s)```\\s*$", "").trim();
+            jsonText = stripMarkdownCodeFence(jsonText);
 
             ResumeParseResponseDto result = objectMapper.readValue(jsonText, ResumeParseResponseDto.class);
             result.setProvider("groq");
@@ -158,5 +158,12 @@ public class GroqAiProvider implements AiProvider {
         } catch (Exception e) {
             throw new IOException("Failed to parse Groq response: " + e.getMessage(), e);
         }
+    }
+
+    private String stripMarkdownCodeFence(String value) {
+        return value
+                .replaceFirst("(?s)^```(?:json)?\\s*", "")
+                .replaceFirst("(?s)\\s*```\\s*$", "")
+                .trim();
     }
 }
