@@ -123,14 +123,15 @@ public class GroqAiProvider implements AiProvider {
                 + "\"experience\": [{\"company\": string, \"roleTitle\": string, \"duration\": string, \"startMonth\": number or null, \"startYear\": number or null, \"endMonth\": number or null, \"endYear\": number or null, \"current\": boolean, \"responsibilities\": [string], \"achievements\": [string], \"skills\": [string], \"location\": string or null}] or [], "
                 + "\"education\": [{\"level\": string, \"institute\": string, \"location\": string or null, \"degree\": string, \"scoreLabel\": string or null, \"scoreValue\": string or null, \"duration\": string or null, \"startYear\": number or null, \"endYear\": number or null}] or [], "
                 + "\"projects\": [{\"name\": string, \"type\": string or \"Personal\", \"status\": string or \"Completed\", \"year\": string or null, \"overview\": string (generate if missing), \"techStack\": [string], \"liveLink\": string or null, \"sourceLink\": string or null}] or [], "
-                + "\"certifications\": [string] or [], "
+                + "\"certificationAchievements\": [{\"type\": string (\"certification\" or \"achievement\"), \"title\": string, \"issuer\": string or null, \"issuedOn\": string or null, \"description\": string or null, \"referenceUrl\": string or null, \"imageUrl\": string or null}] or [], "
                 + "\"linkedinUrl\": string or null, "
                 + "\"githubUrl\": string or null, "
                 + "\"websiteUrl\": string or null, "
                 + "\"otherLinks\": [{\"label\": string, \"url\": string}] or [], "
                 + "\"principles\": [{\"title\": string, \"description\": string}] (generate 2-3 based on resume) or [] "
                 + "}. "
-                + "Return ONLY the JSON object. Generate professional content for about, summary, principles, and project overviews when missing.";
+                + "Return ONLY the JSON object. Generate professional content for about, summary, principles, and project overviews when missing. "
+                + "Place certificates, licenses, awards, honors, recognitions, and competition wins inside certificationAchievements with the correct type.";
     }
 
     private ResumeParseResponseDto parseGroqResponse(String responseBody) throws IOException {

@@ -38,8 +38,8 @@ public class ResumeParseResponseDto {
     // Projects
     private List<ParsedProject> projects;
 
-    // Certifications
-    private List<String> certifications;
+    // Certifications & Achievements
+    private List<ParsedCertificationAchievement> certificationAchievements;
 
     // Social Links
     private String linkedinUrl;
@@ -103,6 +103,20 @@ public class ResumeParseResponseDto {
         private List<String> techStack;
         private String liveLink;
         private String sourceLink;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ParsedCertificationAchievement {
+        private String type;
+        private String title;
+        private String issuer;
+        private String issuedOn;
+        private String description;
+        private String referenceUrl;
+        private String imageUrl;
     }
 
     @Data

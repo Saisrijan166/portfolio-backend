@@ -136,7 +136,7 @@ public class InternalResumeParser {
                 .experience(extractExperiences(sections))
                 .education(extractEducation(sections))
                 .projects(extractProjects(sections))
-                .certifications(extractCertifications(sections))
+                .certificationAchievements(extractCertificationAchievements(sections))
                 .linkedinUrl(extractFirst(text, LINKEDIN_PATTERN))
                 .githubUrl(extractFirst(text, GITHUB_PATTERN))
                 .websiteUrl(extractWebsite(text))
@@ -690,28 +690,41 @@ public class InternalResumeParser {
         return builder.build();
     }
 
-    // ─── Certifications extraction ───────────────────────────────────────────
+    // ─── Certifications & achievements extraction ───────────────────────────
 
-    private List<String> extractCertifications(Map<String, List<String>> sections) {
-        List<String> certs = new ArrayList<>();
+    private List<ParsedCertificationAchievement> extractCertificationAchievements(Map<String, List<String>> sections) {
+        List<ParsedCertificationAchievement> items = new ArrayList<>();
 
-        // Check both certifications and achievements sections
         for (String key : List.of("certifications", "achievements")) {
             List<String> lines = sections.get(key);
-            if (lines == null)
+            if (lines == null) {
                 continue;
+            }
 
+            String type = "achievements".equals(key) ? "achievement" : "certification";
             for (String line : lines) {
-                if (line.isEmpty())
+                if (line.isEmpty()) {
                     continue;
-                String cleaned = line.replaceAll("^[\\-*►▪●○◆→•\\s]+", "").trim();
-                if (!cleaned.isEmpty() && cleaned.length() > 2) {
-                    certs.add(cleaned);
                 }
+
+                String cleaned = line.replaceAll("^[\\-*►▪●○◆→•\\s]+", "").trim();
+                if (cleaned.isEmpty() || cleaned.length() <= 2) {
+                    continue;
+                }
+
+                items.add(ParsedCertificationAchievement.builder()
+                        .type(type)
+                        .title(cleaned)
+                        .issuer(null)
+                        .issuedOn(extractFirst(cleaned, SINGLE_YEAR_PATTERN))
+                        .description(null)
+                        .referenceUrl(null)
+                        .imageUrl(null)
+                        .build());
             }
         }
 
-        return certs;
+        return items;
     }
 
     // ─── Link extraction ─────────────────────────────────────────────────────

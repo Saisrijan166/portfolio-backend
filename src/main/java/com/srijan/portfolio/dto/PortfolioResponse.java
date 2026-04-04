@@ -18,6 +18,7 @@ public class PortfolioResponse {
     private DesktopWidgetsDto widgets;
     private List<ProjectDto> projects;
     private List<ExperienceDto> experiences;
+    private List<CertificationAchievementDto> certificationAchievements;
     private List<SkillDto> skills;
     private List<EducationDto> educations;
     private ResumeDto resume;

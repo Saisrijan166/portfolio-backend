@@ -71,6 +71,15 @@ public class PublicPortfolioController {
         return data == null ? cachedUserNotFound() : cachedSuccess(data, "Experience loaded");
     }
 
+    @GetMapping("/api/public/portfolio/{username}/certifications-achievements")
+    public ResponseEntity<ApiResponse<List<CertificationAchievementDto>>> getPublicCertificationAchievements(
+            @PathVariable
+            @Pattern(regexp = USERNAME_PATTERN, message = "Username format is invalid")
+            String username) {
+        List<CertificationAchievementDto> data = portfolioService.getPublicCertificationAchievements(username);
+        return data == null ? cachedUserNotFound() : cachedSuccess(data, "Certifications and achievements loaded");
+    }
+
     @GetMapping("/api/public/portfolio/{username}/skills")
     public ResponseEntity<ApiResponse<List<SkillDto>>> getPublicSkills(
             @PathVariable

@@ -35,6 +35,7 @@ public class PortfolioService {
     private final AboutRepository aboutRepository;
     private final ProjectRepository projectRepository;
     private final ExperienceRepository experienceRepository;
+    private final CertificationAchievementRepository certificationAchievementRepository;
     private final SkillRepository skillRepository;
     private final EducationRepository educationRepository;
     private final ResumeRepository resumeRepository;
@@ -106,6 +107,7 @@ public class PortfolioService {
         Contact contact = contactRepository.findByUserId(userId).orElse(null);
         List<Project> projects = projectRepository.findByUserId(userId);
         List<Experience> experiences = experienceRepository.findByUserId(userId);
+        List<CertificationAchievement> certificationAchievements = certificationAchievementRepository.findByUserIdOrderByIdAsc(userId);
         List<Skill> skills = skillRepository.findByUserId(userId);
         List<Education> educations = educationRepository.findByUserId(userId);
         long projectCount = projectRepository.countByUserId(userId);
@@ -116,7 +118,7 @@ public class PortfolioService {
                 .profile(mapPortfolioIdentity(profile, about))
                 .about(mapPortfolioAboutSummary(about))
                 .widgets(mapDesktopWidgets(widgets))
-                .lastUpdated(resolveLastUpdated(profile, about, widgets, resume, contact, projects, experiences, skills, educations))
+                .lastUpdated(resolveLastUpdated(profile, about, widgets, resume, contact, projects, experiences, certificationAchievements, skills, educations))
                 .projectCount(projectCount)
                 .experienceCount(professionalExperienceCount)
                 .build();
@@ -164,6 +166,15 @@ public class PortfolioService {
         }
         return experienceRepository.findByUserUsername(sanitize(username))
                 .stream().map(this::mapExperience).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<CertificationAchievementDto> getPublicCertificationAchievements(String username) {
+        if (!publicUserExists(username)) {
+            return null;
+        }
+        return certificationAchievementRepository.findByUserUsernameOrderByIdAsc(sanitize(username))
+                .stream().map(this::mapCertificationAchievement).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -304,6 +315,12 @@ public class PortfolioService {
                 .stream().map(this::mapExperience).collect(Collectors.toList());
     }
 
+    public List<CertificationAchievementDto> getMyCertificationAchievements(String username) {
+        findUserByUsername(username);
+        return certificationAchievementRepository.findByUserUsernameOrderByIdAsc(username)
+                .stream().map(this::mapCertificationAchievement).collect(Collectors.toList());
+    }
+
     @Transactional
     public ExperienceDto createExperience(String username, ExperienceDto dto) {
         User user = findUserByUsername(username);
@@ -352,6 +369,49 @@ public class PortfolioService {
         e.setScoreLabel(sanitize(dto.getScoreLabel()));
         e.setScoreValue(sanitize(dto.getScoreValue()));
         return e;
+    }
+
+    @Transactional
+    public CertificationAchievementDto createCertificationAchievement(String username, CertificationAchievementDto dto) {
+        User user = findUserByUsername(username);
+        CertificationAchievement entry = buildCertificationAchievement(new CertificationAchievement(), user, dto);
+        return mapCertificationAchievement(certificationAchievementRepository.save(entry));
+    }
+
+    @Transactional
+    public CertificationAchievementDto updateCertificationAchievement(String username, Long id, CertificationAchievementDto dto) {
+        CertificationAchievement entry = certificationAchievementRepository.findByIdAndUserUsername(id, username)
+                .orElseThrow(() -> new ResourceNotFoundException("Certification or achievement not found"));
+        return mapCertificationAchievement(certificationAchievementRepository.save(buildCertificationAchievement(entry, entry.getUser(), dto)));
+    }
+
+    @Transactional
+    public void deleteCertificationAchievement(String username, Long id) {
+        CertificationAchievement entry = certificationAchievementRepository.findByIdAndUserUsername(id, username)
+                .orElseThrow(() -> new ResourceNotFoundException("Certification or achievement not found"));
+        certificationAchievementRepository.delete(entry);
+    }
+
+    private CertificationAchievement buildCertificationAchievement(
+            CertificationAchievement entry,
+            User user,
+            CertificationAchievementDto dto
+    ) {
+        String type = sanitize(dto.getType());
+        if (!"certification".equalsIgnoreCase(type) && !"achievement".equalsIgnoreCase(type)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_CERTIFICATION_ACHIEVEMENT_TYPE",
+                    "Type must be certification or achievement");
+        }
+
+        entry.setUser(user);
+        entry.setType(type.toLowerCase(Locale.ROOT));
+        entry.setTitle(sanitize(dto.getTitle()));
+        entry.setIssuer(sanitize(dto.getIssuer()));
+        entry.setIssuedOn(sanitize(dto.getIssuedOn()));
+        entry.setDescription(sanitize(dto.getDescription()));
+        entry.setReferenceUrl(sanitize(dto.getReferenceUrl()));
+        entry.setImageUrl(sanitize(dto.getImageUrl()));
+        return entry;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -512,6 +572,7 @@ public class PortfolioService {
         About about = readAboutSafely(userId);
         List<Project> projects = projectRepository.findByUserId(userId);
         List<Experience> experiences = experienceRepository.findByUserId(userId);
+        List<CertificationAchievement> certificationAchievements = certificationAchievementRepository.findByUserIdOrderByIdAsc(userId);
         List<Skill> skills = skillRepository.findByUserId(userId);
         List<Education> educations = educationRepository.findByUserId(userId);
         Resume resume = resumeRepository.findByUserId(userId).orElse(null);
@@ -525,11 +586,12 @@ public class PortfolioService {
                 .widgets(mapDesktopWidgets(widgets))
                 .projects(projects.stream().map(this::mapProject).collect(Collectors.toList()))
                 .experiences(experiences.stream().map(this::mapExperience).collect(Collectors.toList()))
+                .certificationAchievements(certificationAchievements.stream().map(this::mapCertificationAchievement).collect(Collectors.toList()))
                 .skills(skills.stream().map(this::mapSkill).collect(Collectors.toList()))
                 .educations(educations.stream().map(this::mapEducation).collect(Collectors.toList()))
                 .resume(mapResume(resume))
                 .contact(mapContact(contact))
-                .lastUpdated(resolveLastUpdated(profile, about, widgets, resume, contact, projects, experiences, skills, educations))
+                .lastUpdated(resolveLastUpdated(profile, about, widgets, resume, contact, projects, experiences, certificationAchievements, skills, educations))
                 .build();
     }
 
@@ -694,6 +756,7 @@ public class PortfolioService {
             Contact contact,
             List<Project> projects,
             List<Experience> experiences,
+            List<CertificationAchievement> certificationAchievements,
             List<Skill> skills,
             List<Education> educations
     ) {
@@ -708,6 +771,7 @@ public class PortfolioService {
                         Stream.of(
                                 projects.stream().map(Project::getUpdatedAt).max(LocalDateTime::compareTo).orElse(null),
                                 experiences.stream().map(Experience::getUpdatedAt).max(LocalDateTime::compareTo).orElse(null),
+                                certificationAchievements.stream().map(CertificationAchievement::getUpdatedAt).max(LocalDateTime::compareTo).orElse(null),
                                 skills.stream().map(Skill::getUpdatedAt).max(LocalDateTime::compareTo).orElse(null),
                                 educations.stream().map(Education::getUpdatedAt).max(LocalDateTime::compareTo).orElse(null)
                         )
@@ -757,6 +821,19 @@ public class PortfolioService {
                 .degree(exp.getDegree())
                 .scoreLabel(exp.getScoreLabel())
                 .scoreValue(exp.getScoreValue())
+                .build();
+    }
+
+    CertificationAchievementDto mapCertificationAchievement(CertificationAchievement entry) {
+        return CertificationAchievementDto.builder()
+                .id(entry.getId())
+                .type(entry.getType())
+                .title(entry.getTitle())
+                .issuer(entry.getIssuer())
+                .issuedOn(entry.getIssuedOn())
+                .description(entry.getDescription())
+                .referenceUrl(entry.getReferenceUrl())
+                .imageUrl(entry.getImageUrl())
                 .build();
     }
 

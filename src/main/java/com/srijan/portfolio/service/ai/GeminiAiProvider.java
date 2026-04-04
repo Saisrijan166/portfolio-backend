@@ -116,7 +116,7 @@ public class GeminiAiProvider implements AiProvider {
         + "\\\"experience\\\": [{\\\"company\\\": string, \\\"roleTitle\\\": string, \\\"duration\\\": string, \\\"startMonth\\\": number or null, \\\"startYear\\\": number or null, \\\"endMonth\\\": number or null, \\\"endYear\\\": number or null, \\\"current\\\": boolean, \\\"responsibilities\\\": [string], \\\"achievements\\\": [string], \\\"skills\\\": [string], \\\"location\\\": string or null}] or [], "
         + "\\\"education\\\": [{\\\"level\\\": string (e.g. 'Bachelors', 'Masters', 'PhD', 'High School'), \\\"institute\\\": string, \\\"location\\\": string or null, \\\"degree\\\": string, \\\"scoreLabel\\\": string or null (e.g. 'GPA', 'Percentage', 'CGPA'), \\\"scoreValue\\\": string or null, \\\"duration\\\": string or null, \\\"startYear\\\": number or null, \\\"endYear\\\": number or null}] or [], "
         + "\\\"projects\\\": [{\\\"name\\\": string, \\\"type\\\": string or 'Personal', \\\"status\\\": string or 'Completed', \\\"year\\\": string or null, \\\"overview\\\": string (generate concise description from name and tech if overview missing, max 200 chars), \\\"techStack\\\": [string], \\\"liveLink\\\": string or null, \\\"sourceLink\\\": string or null}] or [], "
-        + "\\\"certifications\\\": [string] or [], "
+        + "\\\"certificationAchievements\\\": [{\\\"type\\\": string ('certification' or 'achievement'), \\\"title\\\": string, \\\"issuer\\\": string or null, \\\"issuedOn\\\": string or null, \\\"description\\\": string or null, \\\"referenceUrl\\\": string or null, \\\"imageUrl\\\": string or null}] or [], "
         + "\\\"linkedinUrl\\\": string or null, "
         + "\\\"githubUrl\\\": string or null, "
         + "\\\"websiteUrl\\\": string or null, "
@@ -125,6 +125,7 @@ public class GeminiAiProvider implements AiProvider {
         + "}. "
         + "IMPORTANT: Return ONLY the JSON object, no markdown, no code blocks, no explanation. "
         + "For generated fields (about, summary, principles, project overviews): create professional, accurate content based on the resume data. "
+        + "Capture certificates, licenses, awards, honors, recognitions, scholarships, rankings, and competition wins inside certificationAchievements with the correct type. "
         + "For months use 1-12 (January=1). Parse all dates accurately. Mark current positions with current=true.";
   }
 
