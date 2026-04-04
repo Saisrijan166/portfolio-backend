@@ -1,5 +1,8 @@
 package com.srijan.portfolio.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.srijan.portfolio.config.FlexibleLocalDateDeserializer;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -7,6 +10,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -20,16 +25,17 @@ public class CertificationAchievementDto {
     private String type;
 
     @NotBlank
-    @Size(max = 100)
+    @Size(max = 50)
     private String title;
 
-    @Size(max = 100)
+    @Size(max = 50)
     private String issuer;
 
-    @Size(max = 100)
-    private String issuedOn;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    @JsonDeserialize(using = FlexibleLocalDateDeserializer.class)
+    private LocalDate issuedOn;
 
-    @Size(max = 1000)
+    @Size(max = 200)
     private String description;
 
     @Size(max = 512)

@@ -407,7 +407,7 @@ public class PortfolioService {
         entry.setType(type.toLowerCase(Locale.ROOT));
         entry.setTitle(sanitize(dto.getTitle()));
         entry.setIssuer(sanitize(dto.getIssuer()));
-        entry.setIssuedOn(sanitize(dto.getIssuedOn()));
+        entry.setIssuedOn(dto.getIssuedOn());
         entry.setDescription(sanitize(dto.getDescription()));
         entry.setReferenceUrl(sanitize(dto.getReferenceUrl()));
         entry.setImageUrl(sanitize(dto.getImageUrl()));

@@ -82,7 +82,11 @@ public class AboutService {
         }
 
         if (dto.getPrinciples() != null) {
+            if (about.getId() == null) {
+                about = aboutRepository.saveAndFlush(about);
+            }
             about.getPrinciples().clear();
+            aboutRepository.saveAndFlush(about);
             List<PrincipleDto> sanitizedPrinciples = sanitizePrinciples(dto.getPrinciples());
             for (int index = 0; index < sanitizedPrinciples.size(); index++) {
                 PrincipleDto principle = sanitizedPrinciples.get(index);
