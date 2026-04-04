@@ -34,6 +34,14 @@ public class FlexibleLocalDateDeserializer extends JsonDeserializer<LocalDate> {
     @Override
     public LocalDate deserialize(JsonParser parser, DeserializationContext context) throws IOException {
         String raw = parser.getValueAsString();
+        try {
+            return parse(raw);
+        } catch (InvalidFormatException exception) {
+            throw exception;
+        }
+    }
+
+    public static LocalDate parse(String raw) throws InvalidFormatException {
         if (raw == null) {
             return null;
         }
@@ -62,6 +70,14 @@ public class FlexibleLocalDateDeserializer extends JsonDeserializer<LocalDate> {
         } catch (DateTimeParseException ignored) {
         }
 
-        throw InvalidFormatException.from(parser, "Date must be a valid date", value, LocalDate.class);
+        throw InvalidFormatException.from(null, "Date must be a valid date", value, LocalDate.class);
+    }
+
+    public static LocalDate parseOrNull(String raw) {
+        try {
+            return parse(raw);
+        } catch (InvalidFormatException exception) {
+            return null;
+        }
     }
 }

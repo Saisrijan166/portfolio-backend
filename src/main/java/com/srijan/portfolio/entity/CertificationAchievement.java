@@ -5,7 +5,6 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -36,7 +35,8 @@ public class CertificationAchievement {
     @Column(length = 100)
     private String issuer;
 
-    private LocalDate issuedOn;
+    @Column(length = 100)
+    private String issuedOn;
 
     @Column(length = 1000)
     private String description;

@@ -1,5 +1,6 @@
 package com.srijan.portfolio.service;
 
+import com.srijan.portfolio.config.FlexibleLocalDateDeserializer;
 import com.srijan.portfolio.dto.*;
 import com.srijan.portfolio.entity.*;
 import com.srijan.portfolio.exception.ApiException;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.Year;
@@ -407,7 +409,7 @@ public class PortfolioService {
         entry.setType(type.toLowerCase(Locale.ROOT));
         entry.setTitle(sanitize(dto.getTitle()));
         entry.setIssuer(sanitize(dto.getIssuer()));
-        entry.setIssuedOn(dto.getIssuedOn());
+        entry.setIssuedOn(formatIssuedOn(dto.getIssuedOn()));
         entry.setDescription(sanitize(dto.getDescription()));
         entry.setReferenceUrl(sanitize(dto.getReferenceUrl()));
         entry.setImageUrl(sanitize(dto.getImageUrl()));
@@ -830,11 +832,15 @@ public class PortfolioService {
                 .type(entry.getType())
                 .title(entry.getTitle())
                 .issuer(entry.getIssuer())
-                .issuedOn(entry.getIssuedOn())
+                .issuedOn(FlexibleLocalDateDeserializer.parseOrNull(entry.getIssuedOn()))
                 .description(entry.getDescription())
                 .referenceUrl(entry.getReferenceUrl())
                 .imageUrl(entry.getImageUrl())
                 .build();
+    }
+
+    private String formatIssuedOn(LocalDate issuedOn) {
+        return issuedOn == null ? null : issuedOn.toString();
     }
 
     SkillDto mapSkill(Skill skill) {
