@@ -2,10 +2,8 @@ package com.srijan.portfolio.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import lombok.Getter;
 
 @Configuration
-@Getter
 public class AiProviderConfig {
 
     @Value("${GEMINI_API_KEY:}")
@@ -14,7 +12,7 @@ public class AiProviderConfig {
     @Value("${GROQ_API_KEY:}")
     private String groqApiKey;
 
-    @Value("${AI_TIMEOUT_MS:8000}")
+    @Value("${AI_TIMEOUT_MS:20000}")
     private int timeoutMs;
 
     @Value("${RESUME_MAX_SIZE_BYTES:2097152}")
@@ -26,5 +24,23 @@ public class AiProviderConfig {
 
     public boolean isGroqAvailable() {
         return groqApiKey != null && !groqApiKey.isBlank();
+    }
+
+    /** Used by AI providers to authenticate with external APIs */
+    public String getGeminiApiKey() {
+        return geminiApiKey;
+    }
+
+    /** Used by AI providers to authenticate with external APIs */
+    public String getGroqApiKey() {
+        return groqApiKey;
+    }
+
+    public int getTimeoutMs() {
+        return timeoutMs;
+    }
+
+    public long getMaxFileSize() {
+        return maxFileSize;
     }
 }

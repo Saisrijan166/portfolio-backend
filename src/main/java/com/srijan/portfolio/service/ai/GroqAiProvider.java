@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -23,10 +24,16 @@ public class GroqAiProvider implements AiProvider {
 
     private final AiProviderConfig config;
     private final ObjectMapper objectMapper;
+    private final OkHttpClient httpClient;
 
     public GroqAiProvider(AiProviderConfig config, ObjectMapper objectMapper) {
         this.config = config;
         this.objectMapper = objectMapper;
+        this.httpClient = new OkHttpClient.Builder()
+                .connectTimeout(config.getTimeoutMs(), TimeUnit.MILLISECONDS)
+                .readTimeout(config.getTimeoutMs(), TimeUnit.MILLISECONDS)
+                .writeTimeout(config.getTimeoutMs(), TimeUnit.MILLISECONDS)
+                .build();
     }
 
     @Override
@@ -41,18 +48,17 @@ public class GroqAiProvider implements AiProvider {
 
     @Override
     public ResumeParseResponseDto parseResume(byte[] fileBytes, String fileType, String extractedText)
-            throws Exception {
+            throws IOException {
         if (extractedText == null || extractedText.isBlank()) {
-            throw new RuntimeException("No extracted text available for Groq");
+            throw new IOException("No extracted text available for Groq");
         }
 
-        OkHttpClient client = new OkHttpClient.Builder()
-                .connectTimeout(config.getTimeoutMs(), TimeUnit.MILLISECONDS)
-                .readTimeout(config.getTimeoutMs(), TimeUnit.MILLISECONDS)
-                .writeTimeout(config.getTimeoutMs(), TimeUnit.MILLISECONDS)
-                .build();
-
-        String requestJson = buildGroqRequest(extractedText);
+        String requestJson;
+        try {
+            requestJson = buildGroqRequest(extractedText);
+        } catch (Exception e) {
+            throw new IOException("Failed to build Groq request: " + e.getMessage(), e);
+        }
 
         Request request = new Request.Builder()
                 .url(GROQ_URL)
@@ -61,14 +67,18 @@ public class GroqAiProvider implements AiProvider {
                 .post(RequestBody.create(requestJson, MediaType.parse("application/json")))
                 .build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 log.warn("Groq returned HTTP {}", response.code());
-                throw new RuntimeException("Groq API error: HTTP " + response.code());
+                throw new IOException("Groq API error: HTTP " + response.code());
             }
 
-            String responseBody = response.body() != null ? response.body().string() : "";
-            return parseGroqResponse(responseBody);
+            ResponseBody body = response.body();
+            if (body == null) {
+                throw new IOException("Groq returned empty response body");
+            }
+
+            return parseGroqResponse(body.string());
         }
     }
 
@@ -123,21 +133,30 @@ public class GroqAiProvider implements AiProvider {
                 + "Return ONLY the JSON object. Generate professional content for about, summary, principles, and project overviews when missing.";
     }
 
-    private ResumeParseResponseDto parseGroqResponse(String responseBody) throws Exception {
-        JsonNode root = objectMapper.readTree(responseBody);
-        JsonNode choices = root.path("choices");
+    private ResumeParseResponseDto parseGroqResponse(String responseBody) throws IOException {
+        try {
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode choices = root.path("choices");
 
-        if (choices.isEmpty() || !choices.isArray()) {
-            throw new RuntimeException("Groq returned no choices");
+            if (!choices.isArray() || choices.isEmpty()) {
+                throw new IOException("Groq returned no choices");
+            }
+
+            String jsonText = choices.get(0).path("message").path("content").asText("");
+            if (jsonText.isBlank()) {
+                throw new IOException("Groq returned empty message content");
+            }
+
+            // Clean up markdown wrapping if present
+            jsonText = jsonText.replaceAll("(?s)```json\\s*", "").replaceAll("(?s)```\\s*$", "").trim();
+
+            ResumeParseResponseDto result = objectMapper.readValue(jsonText, ResumeParseResponseDto.class);
+            result.setProvider("groq");
+            return result;
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IOException("Failed to parse Groq response: " + e.getMessage(), e);
         }
-
-        String jsonText = choices.get(0).path("message").path("content").asText();
-
-        // Clean up markdown wrapping if present
-        jsonText = jsonText.replaceAll("(?s)```json\\s*", "").replaceAll("(?s)```\\s*$", "").trim();
-
-        ResumeParseResponseDto result = objectMapper.readValue(jsonText, ResumeParseResponseDto.class);
-        result.setProvider("groq");
-        return result;
     }
 }

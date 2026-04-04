@@ -5,6 +5,7 @@ import com.srijan.portfolio.dto.ResumeParseRequestDto;
 import com.srijan.portfolio.dto.ResumeParseResponseDto;
 import com.srijan.portfolio.service.ResumeParseService;
 import com.srijan.portfolio.util.ApiResponses;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -20,7 +21,7 @@ public class ResumeParseController {
     @PostMapping("/parse")
     public ResponseEntity<ApiResponse<ResumeParseResponseDto>> parseResume(
             Authentication auth,
-            @RequestBody ResumeParseRequestDto request) {
+            @Valid @RequestBody ResumeParseRequestDto request) {
         ResumeParseResponseDto result = resumeParseService.parseResume(
                 request.getFileBase64(),
                 request.getFileType(),

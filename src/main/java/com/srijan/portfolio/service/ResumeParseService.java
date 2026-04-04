@@ -112,8 +112,6 @@ public class ResumeParseService {
                 return "pdf";
             if (type.contains("docx") || type.contains("word") || type.contains("openxmlformats"))
                 return "docx";
-            if (type.contains("doc"))
-                return "docx";
             if (type.contains("txt") || type.contains("text"))
                 return "txt";
             return type;
@@ -124,8 +122,6 @@ public class ResumeParseService {
             if (lower.endsWith(".pdf"))
                 return "pdf";
             if (lower.endsWith(".docx"))
-                return "docx";
-            if (lower.endsWith(".doc"))
                 return "docx";
             if (lower.endsWith(".txt"))
                 return "txt";

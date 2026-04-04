@@ -72,14 +72,6 @@ public class ResumeParseResponseDto {
         private List<String> achievements;
         private List<String> skills;
         private String location;
-
-        // Education-type fields (for academic experience)
-        private boolean academic;
-        private String level;
-        private String institute;
-        private String degree;
-        private String scoreLabel;
-        private String scoreValue;
     }
 
     @Data
