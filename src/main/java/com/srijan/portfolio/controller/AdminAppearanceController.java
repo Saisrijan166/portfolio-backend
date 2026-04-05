@@ -7,6 +7,7 @@ import com.srijan.portfolio.util.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +26,9 @@ public class AdminAppearanceController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<AppearanceSettingsDto>> getAppearance(Authentication auth) {
+        if (auth == null) {
+            throw new AccessDeniedException("Authentication required");
+        }
         return ApiResponses.ok(appearanceConfigService.getMyAppearance(auth.getName()), "Appearance loaded");
     }
 
@@ -32,6 +36,9 @@ public class AdminAppearanceController {
     public ResponseEntity<ApiResponse<AppearanceSettingsDto>> updateAppearance(
             Authentication auth,
             @Valid @RequestBody AppearanceSettingsDto dto) {
+        if (auth == null) {
+            throw new AccessDeniedException("Authentication required");
+        }
         return ApiResponses.ok(appearanceConfigService.updateAppearance(auth.getName(), dto), "Appearance updated");
     }
 }

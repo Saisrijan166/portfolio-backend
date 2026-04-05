@@ -52,8 +52,9 @@ public class AppearanceConfigService {
     }
 
     private User findUserByUsername(String username) {
-        return userRepository.findByUsername(sanitize(username))
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+        String sanitizedUsername = sanitize(username);
+        return userRepository.findByUsername(sanitizedUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + sanitizedUsername));
     }
 
     private AppearanceSettingsDto map(AppearanceConfig config) {
