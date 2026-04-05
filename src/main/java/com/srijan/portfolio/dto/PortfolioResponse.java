@@ -16,6 +16,7 @@ public class PortfolioResponse {
     private PortfolioIdentityDto profile;
     private PortfolioAboutSummaryDto about;
     private DesktopWidgetsDto widgets;
+    private AppearanceSettingsDto appearance;
     private List<ProjectDto> projects;
     private List<ExperienceDto> experiences;
     private List<CertificationAchievementDto> certificationAchievements;

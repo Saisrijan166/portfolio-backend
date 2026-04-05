@@ -43,6 +43,7 @@ public class PortfolioService {
     private final ResumeRepository resumeRepository;
     private final ContactRepository contactRepository;
     private final DesktopWidgetConfigRepository desktopWidgetConfigRepository;
+    private final AppearanceConfigRepository appearanceConfigRepository;
     private final ObjectMapper objectMapper;
 
     private static final DateTimeFormatter BOOTSTRAP_TIMESTAMP_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
@@ -105,6 +106,7 @@ public class PortfolioService {
         Profile profile = profileRepository.findByUserId(userId).orElse(null);
         About about = readAboutSafely(userId);
         DesktopWidgetConfig widgets = desktopWidgetConfigRepository.findByUserId(userId).orElse(null);
+        AppearanceConfig appearance = appearanceConfigRepository.findByUserId(userId).orElse(null);
         Resume resume = resumeRepository.findByUserId(userId).orElse(null);
         Contact contact = contactRepository.findByUserId(userId).orElse(null);
         List<Project> projects = projectRepository.findByUserId(userId);
@@ -120,7 +122,8 @@ public class PortfolioService {
                 .profile(mapPortfolioIdentity(profile, about))
                 .about(mapPortfolioAboutSummary(about))
                 .widgets(mapDesktopWidgets(widgets))
-                .lastUpdated(resolveLastUpdated(profile, about, widgets, resume, contact, projects, experiences, certificationAchievements, skills, educations))
+                .appearance(mapAppearanceSettings(appearance))
+                .lastUpdated(resolveLastUpdated(profile, about, widgets, appearance, resume, contact, projects, experiences, certificationAchievements, skills, educations))
                 .projectCount(projectCount)
                 .experienceCount(professionalExperienceCount)
                 .build();
@@ -580,12 +583,14 @@ public class PortfolioService {
         Resume resume = resumeRepository.findByUserId(userId).orElse(null);
         Contact contact = contactRepository.findByUserId(userId).orElse(null);
         DesktopWidgetConfig widgets = desktopWidgetConfigRepository.findByUserId(userId).orElse(null);
+        AppearanceConfig appearance = appearanceConfigRepository.findByUserId(userId).orElse(null);
 
         return PortfolioResponse.builder()
                 .username(user.getUsername())
                 .profile(mapPortfolioIdentity(profile, about))
                 .about(mapPortfolioAboutSummary(about))
                 .widgets(mapDesktopWidgets(widgets))
+                .appearance(mapAppearanceSettings(appearance))
                 .projects(projects.stream().map(this::mapProject).collect(Collectors.toList()))
                 .experiences(experiences.stream().map(this::mapExperience).collect(Collectors.toList()))
                 .certificationAchievements(certificationAchievements.stream().map(this::mapCertificationAchievement).collect(Collectors.toList()))
@@ -593,7 +598,7 @@ public class PortfolioService {
                 .educations(educations.stream().map(this::mapEducation).collect(Collectors.toList()))
                 .resume(mapResume(resume))
                 .contact(mapContact(contact))
-                .lastUpdated(resolveLastUpdated(profile, about, widgets, resume, contact, projects, experiences, certificationAchievements, skills, educations))
+                .lastUpdated(resolveLastUpdated(profile, about, widgets, appearance, resume, contact, projects, experiences, certificationAchievements, skills, educations))
                 .build();
     }
 
@@ -680,6 +685,35 @@ public class PortfolioService {
                 .build();
     }
 
+    private AppearanceSettingsDto mapAppearanceSettings(AppearanceConfig config) {
+        if (config == null) {
+            return null;
+        }
+
+        return AppearanceSettingsDto.builder()
+                .theme(sanitize(config.getTheme()))
+                .wallpaper(mapWallpaperSettings(config))
+                .build();
+    }
+
+    private WallpaperSettingsDto mapWallpaperSettings(AppearanceConfig config) {
+        String kind = sanitize(config.getWallpaperKind());
+        String src = sanitize(config.getWallpaperSrc());
+        String id = sanitize(config.getWallpaperId());
+        Boolean isLight = config.getWallpaperIsLight();
+
+        if (kind == null && src == null && id == null && isLight == null) {
+            return null;
+        }
+
+        return WallpaperSettingsDto.builder()
+                .kind(kind)
+                .src(src)
+                .id(id)
+                .isLight(isLight)
+                .build();
+    }
+
     private ProfileDto mapLegacyProfile(Profile profile) {
         if (profile == null) return null;
 
@@ -754,6 +788,7 @@ public class PortfolioService {
             Profile profile,
             About about,
             DesktopWidgetConfig widgets,
+            AppearanceConfig appearance,
             Resume resume,
             Contact contact,
             List<Project> projects,
@@ -767,6 +802,7 @@ public class PortfolioService {
                                 profile != null ? profile.getUpdatedAt() : null,
                                 about != null ? about.getUpdatedAt() : null,
                                 widgets != null ? widgets.getUpdatedAt() : null,
+                                appearance != null ? appearance.getUpdatedAt() : null,
                                 resume != null ? resume.getUpdatedAt() : null,
                                 contact != null ? contact.getUpdatedAt() : null
                         ),
