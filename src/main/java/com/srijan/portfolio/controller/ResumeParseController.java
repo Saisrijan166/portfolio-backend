@@ -54,4 +54,14 @@ public class ResumeParseController {
                 "Resume AI bulk insert completed"
         );
     }
+
+    @PostMapping("/bulk-replace")
+    public ResponseEntity<ApiResponse<ResumeAiBulkMutationResponseDto>> bulkReplace(
+            Authentication auth,
+            @Valid @RequestBody ResumeAiBulkInsertRequestDto request) {
+        return ApiResponses.ok(
+                portfolioService.bulkReplaceResumeAiSections(auth.getName(), request),
+                "Resume AI bulk replace completed"
+        );
+    }
 }

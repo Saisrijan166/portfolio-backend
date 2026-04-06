@@ -378,7 +378,7 @@ public class PortfolioService {
     @Transactional
     public ExperienceDto updateExperience(String username, Long id, ExperienceDto dto) {
         if (dto.isAcademic()) {
-            Education education = educationRepository.findByIdAndUserUsername(id, username)
+            Education education = educationRepository.findByIdAndUserUsername(toEducationId(id), username)
                     .orElseThrow(() -> new ResourceNotFoundException("Experience not found"));
             return mapEducationAsExperience(educationRepository.save(buildEducation(education, education.getUser(), dto)));
         }
@@ -389,9 +389,10 @@ public class PortfolioService {
 
     @Transactional
     public void deleteExperience(String username, Long id) {
-        Optional<Education> education = educationRepository.findByIdAndUserUsername(id, username);
-        if (education.isPresent()) {
-            educationRepository.delete(education.get());
+        if (id != null && id < 0) {
+            Education education = educationRepository.findByIdAndUserUsername(toEducationId(id), username)
+                    .orElseThrow(() -> new ResourceNotFoundException("Experience not found"));
+            educationRepository.delete(education);
             return;
         }
         Experience e = experienceRepository.findByIdAndUserUsername(id, username)
@@ -647,6 +648,16 @@ public class PortfolioService {
                 .build();
     }
 
+    public ResumeAiBulkMutationResponseDto bulkReplaceResumeAiSections(String username, ResumeAiBulkInsertRequestDto request) {
+        User user = findUserByUsername(username);
+        return ResumeAiBulkMutationResponseDto.builder()
+                .results(runResumeAiBulkSections(
+                        normalizeResumeAiSections(request.getSections()),
+                        section -> replaceResumeAiSection(user, request, section)
+                ))
+                .build();
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // LEGACY – kept for backward compatibility (getPortfolioByUsername)
     // ─────────────────────────────────────────────────────────────────────────
@@ -874,6 +885,21 @@ public class PortfolioService {
         };
     }
 
+    private int replaceResumeAiSection(User user, ResumeAiBulkInsertRequestDto request, String section) {
+        return switch (section) {
+            case "projects" -> replaceProjects(user, request.getProjects());
+            case "experience" -> replaceExperiences(user, request.getExperience());
+            case "education" -> replaceEducations(user, request.getEducation());
+            case "certifications" -> replaceCertificationAchievements(user, request.getCertifications());
+            case "skills" -> replaceSkills(user, request.getSkills());
+            default -> throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_RESUME_AI_SECTION",
+                    "Unsupported Resume AI bulk section: " + section
+            );
+        };
+    }
+
     private int insertProjects(User user, List<ProjectDto> dtos) {
         List<ProjectDto> payloads = dtos == null ? List.of() : dtos;
         payloads.forEach(this::validateBulkPayload);
@@ -913,6 +939,58 @@ public class PortfolioService {
     private int insertSkills(User user, List<SkillDto> dtos) {
         List<SkillDto> payloads = dtos == null ? List.of() : dtos;
         payloads.forEach(this::validateBulkPayload);
+        List<Skill> entities = payloads.stream()
+                .map(dto -> buildSkill(new Skill(), user, dto))
+                .collect(Collectors.toList());
+        return skillRepository.saveAll(entities).size();
+    }
+
+    private int replaceProjects(User user, List<ProjectDto> dtos) {
+        List<ProjectDto> payloads = dtos == null ? List.of() : dtos;
+        payloads.forEach(this::validateBulkPayload);
+        projectRepository.deleteAll(projectRepository.findByUserId(user.getId()));
+        List<Project> entities = payloads.stream()
+                .map(dto -> buildProject(new Project(), user, dto))
+                .collect(Collectors.toList());
+        return projectRepository.saveAll(entities).size();
+    }
+
+    private int replaceExperiences(User user, List<ExperienceDto> dtos) {
+        List<ExperienceDto> payloads = dtos == null ? List.of() : dtos;
+        payloads.forEach(this::validateBulkPayload);
+        experienceRepository.deleteAll(experienceRepository.findByUserId(user.getId()));
+        List<Experience> entities = payloads.stream()
+                .map(dto -> buildExperience(new Experience(), user, dto))
+                .collect(Collectors.toList());
+        return experienceRepository.saveAll(entities).size();
+    }
+
+    private int replaceEducations(User user, List<EducationDto> dtos) {
+        List<EducationDto> payloads = dtos == null ? List.of() : dtos;
+        payloads.forEach(this::validateBulkPayload);
+        educationRepository.deleteAll(educationRepository.findByUserId(user.getId()));
+        List<Education> entities = payloads.stream()
+                .map(dto -> buildEducation(new Education(), user, dto))
+                .collect(Collectors.toList());
+        return educationRepository.saveAll(entities).size();
+    }
+
+    private int replaceCertificationAchievements(User user, List<CertificationAchievementDto> dtos) {
+        List<CertificationAchievementDto> payloads = dtos == null ? List.of() : dtos;
+        payloads.forEach(this::validateBulkPayload);
+        certificationAchievementRepository.deleteAll(
+                certificationAchievementRepository.findByUserIdOrderByIdAsc(user.getId())
+        );
+        List<CertificationAchievement> entities = payloads.stream()
+                .map(dto -> buildCertificationAchievement(new CertificationAchievement(), user, dto))
+                .collect(Collectors.toList());
+        return certificationAchievementRepository.saveAll(entities).size();
+    }
+
+    private int replaceSkills(User user, List<SkillDto> dtos) {
+        List<SkillDto> payloads = dtos == null ? List.of() : dtos;
+        payloads.forEach(this::validateBulkPayload);
+        skillRepository.deleteAll(skillRepository.findByUserId(user.getId()));
         List<Skill> entities = payloads.stream()
                 .map(dto -> buildSkill(new Skill(), user, dto))
                 .collect(Collectors.toList());
@@ -1193,7 +1271,7 @@ public class PortfolioService {
         if (education == null) return null;
         ParsedDuration parsedDuration = parseDuration(education.getDuration());
         return ExperienceDto.builder()
-                .id(education.getId())
+                .id(toAcademicExperienceId(education.getId()))
                 .company(education.getInstitute())
                 .roleTitle(education.getDegree())
                 .duration(education.getDuration())
@@ -1213,6 +1291,20 @@ public class PortfolioService {
                 .scoreLabel(education.getScoreLabel())
                 .scoreValue(education.getScoreValue())
                 .build();
+    }
+
+    private Long toAcademicExperienceId(Long educationId) {
+        if (educationId == null) {
+            return null;
+        }
+        return -educationId;
+    }
+
+    private Long toEducationId(Long experienceId) {
+        if (experienceId == null) {
+            return null;
+        }
+        return experienceId < 0 ? Math.negateExact(experienceId) : experienceId;
     }
 
     ResumeDto mapResume(Resume resume) {

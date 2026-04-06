@@ -1,5 +1,6 @@
 package com.srijan.portfolio.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -24,9 +25,18 @@ public class ResumeAiBulkInsertRequestDto {
                     message = "Section must be one of: projects, experience, education, certifications, skills"
             ) String> sections;
 
+    @Valid
     private List<ProjectDto> projects;
+
+    @Valid
     private List<ExperienceDto> experience;
+
+    @Valid
     private List<EducationDto> education;
+
+    @Valid
     private List<CertificationAchievementDto> certifications;
+
+    @Valid
     private List<SkillDto> skills;
 }
