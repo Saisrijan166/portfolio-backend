@@ -22,7 +22,6 @@ public class EducationDto {
     @Size(max = 100)
     private String institute;
 
-    @NotBlank
     @Size(max = 100)
     private String location;
 

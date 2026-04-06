@@ -45,11 +45,11 @@ public class PublicPortfolioController {
     }
 
     @GetMapping("/api/public/portfolio/{username}")
-    public ResponseEntity<ApiResponse<PortfolioResponse>> getPortfolioBootstrap(
+    public ResponseEntity<ApiResponse<PortfolioBootstrapResponse>> getPortfolioBootstrap(
             @PathVariable
             @Pattern(regexp = USERNAME_PATTERN, message = "Username format is invalid")
             String username) {
-        PortfolioResponse data = portfolioService.getPortfolioBootstrap(username);
+        PortfolioBootstrapResponse data = portfolioService.getPortfolioBootstrap(username);
         return data == null ? cachedUserNotFound() : cachedSuccess(data, "Portfolio loaded");
     }
 

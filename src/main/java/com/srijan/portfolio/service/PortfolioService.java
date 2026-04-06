@@ -8,11 +8,16 @@ import com.srijan.portfolio.exception.ResourceNotFoundException;
 import com.srijan.portfolio.repository.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,6 +26,7 @@ import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -45,8 +51,17 @@ public class PortfolioService {
     private final DesktopWidgetConfigRepository desktopWidgetConfigRepository;
     private final AppearanceConfigRepository appearanceConfigRepository;
     private final ObjectMapper objectMapper;
+    private final Validator validator;
+    private final PlatformTransactionManager transactionManager;
 
     private static final DateTimeFormatter BOOTSTRAP_TIMESTAMP_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final List<String> RESUME_AI_BULK_SECTIONS = List.of(
+            "projects",
+            "experience",
+            "education",
+            "certifications",
+            "skills"
+    );
 
     // ─────────────────────────────────────────────────────────────────────────
     // HELPERS
@@ -95,7 +110,7 @@ public class PortfolioService {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public PortfolioResponse getPortfolioBootstrap(String username) {
+    public PortfolioBootstrapResponse getPortfolioBootstrap(String username) {
         Optional<User> userOptional = findOptionalUserByUsername(username);
         if (userOptional.isEmpty()) {
             return null;
@@ -117,7 +132,7 @@ public class PortfolioService {
         long projectCount = projectRepository.countByUserId(userId);
         long professionalExperienceCount = experienceRepository.countProfessionalByUserId(userId);
 
-        return PortfolioResponse.builder()
+        return PortfolioBootstrapResponse.builder()
                 .username(user.getUsername())
                 .profile(mapPortfolioIdentity(profile, about))
                 .about(mapPortfolioAboutSummary(about))
@@ -169,8 +184,20 @@ public class PortfolioService {
         if (!publicUserExists(username)) {
             return null;
         }
-        return experienceRepository.findByUserUsername(sanitize(username))
-                .stream().map(this::mapExperience).collect(Collectors.toList());
+        String sanitizedUsername = sanitize(username);
+        List<ExperienceDto> professional = experienceRepository.findByUserUsername(sanitizedUsername)
+                .stream()
+                .filter(experience -> !experience.isAcademic())
+                .map(this::mapExperience)
+                .collect(Collectors.toList());
+        List<ExperienceDto> academic = educationRepository.findByUserUsername(sanitizedUsername)
+                .stream()
+                .map(this::mapEducationAsExperience)
+                .collect(Collectors.toList());
+        List<ExperienceDto> combined = new ArrayList<>(professional.size() + academic.size());
+        combined.addAll(professional);
+        combined.addAll(academic);
+        return combined;
     }
 
     @Transactional(readOnly = true)
@@ -316,8 +343,19 @@ public class PortfolioService {
 
     public List<ExperienceDto> getMyExperience(String username) {
         findUserByUsername(username);
-        return experienceRepository.findByUserUsername(username)
-                .stream().map(this::mapExperience).collect(Collectors.toList());
+        List<ExperienceDto> professional = experienceRepository.findByUserUsername(username)
+                .stream()
+                .filter(entry -> !entry.isAcademic())
+                .map(this::mapExperience)
+                .collect(Collectors.toList());
+        List<ExperienceDto> academic = educationRepository.findByUserUsername(username)
+                .stream()
+                .map(this::mapEducationAsExperience)
+                .collect(Collectors.toList());
+        List<ExperienceDto> combined = new ArrayList<>(professional.size() + academic.size());
+        combined.addAll(professional);
+        combined.addAll(academic);
+        return combined;
     }
 
     public List<CertificationAchievementDto> getMyCertificationAchievements(String username) {
@@ -329,12 +367,21 @@ public class PortfolioService {
     @Transactional
     public ExperienceDto createExperience(String username, ExperienceDto dto) {
         User user = findUserByUsername(username);
+        if (dto.isAcademic()) {
+            Education education = buildEducation(new Education(), user, dto);
+            return mapEducationAsExperience(educationRepository.save(education));
+        }
         Experience e = buildExperience(new Experience(), user, dto);
         return mapExperience(experienceRepository.save(e));
     }
 
     @Transactional
     public ExperienceDto updateExperience(String username, Long id, ExperienceDto dto) {
+        if (dto.isAcademic()) {
+            Education education = educationRepository.findByIdAndUserUsername(id, username)
+                    .orElseThrow(() -> new ResourceNotFoundException("Experience not found"));
+            return mapEducationAsExperience(educationRepository.save(buildEducation(education, education.getUser(), dto)));
+        }
         Experience e = experienceRepository.findByIdAndUserUsername(id, username)
                 .orElseThrow(() -> new ResourceNotFoundException("Experience not found"));
         return mapExperience(experienceRepository.save(buildExperience(e, e.getUser(), dto)));
@@ -342,6 +389,11 @@ public class PortfolioService {
 
     @Transactional
     public void deleteExperience(String username, Long id) {
+        Optional<Education> education = educationRepository.findByIdAndUserUsername(id, username);
+        if (education.isPresent()) {
+            educationRepository.delete(education.get());
+            return;
+        }
         Experience e = experienceRepository.findByIdAndUserUsername(id, username)
                 .orElseThrow(() -> new ResourceNotFoundException("Experience not found"));
         experienceRepository.delete(e);
@@ -503,6 +555,19 @@ public class PortfolioService {
         return ed;
     }
 
+    private Education buildEducation(Education ed, User user, ExperienceDto dto) {
+        ExperiencePeriod period = normalizeExperiencePeriod(dto);
+        ed.setUser(user);
+        ed.setLevel(sanitize(dto.getLevel()));
+        ed.setInstitute(firstNonBlank(dto.getInstitute(), dto.getCompany()));
+        ed.setLocation(sanitize(dto.getLocation()));
+        ed.setDegree(firstNonBlank(dto.getDegree(), dto.getRoleTitle()));
+        ed.setScoreLabel(sanitize(dto.getScoreLabel()));
+        ed.setScoreValue(sanitize(dto.getScoreValue()));
+        ed.setDuration(period.duration());
+        return ed;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // ADMIN RESUME – /api/me/resume
     // ─────────────────────────────────────────────────────────────────────────
@@ -563,6 +628,23 @@ public class PortfolioService {
         contact.setSocialLinks(social);
 
         return mapContact(contactRepository.save(contact));
+    }
+
+    public ResumeAiBulkMutationResponseDto bulkDeleteResumeAiSections(String username, List<String> sections) {
+        User user = findUserByUsername(username);
+        return ResumeAiBulkMutationResponseDto.builder()
+                .results(runResumeAiBulkSections(normalizeResumeAiSections(sections), section -> deleteResumeAiSection(user, section)))
+                .build();
+    }
+
+    public ResumeAiBulkMutationResponseDto bulkInsertResumeAiSections(String username, ResumeAiBulkInsertRequestDto request) {
+        User user = findUserByUsername(username);
+        return ResumeAiBulkMutationResponseDto.builder()
+                .results(runResumeAiBulkSections(
+                        normalizeResumeAiSections(request.getSections()),
+                        section -> insertResumeAiSection(user, request, section)
+                ))
+                .build();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -645,6 +727,19 @@ public class PortfolioService {
         return educationRepository.saveAll(updated).stream().map(this::mapEducation).collect(Collectors.toList());
     }
 
+    @Transactional
+    public List<CertificationAchievementDto> updateCertificationAchievements(String username, List<CertificationAchievementDto> dtos) {
+        User user = findUserByUsername(username);
+        List<CertificationAchievement> existing = certificationAchievementRepository.findByUserIdOrderByIdAsc(user.getId());
+        certificationAchievementRepository.deleteAll(existing);
+        List<CertificationAchievement> updated = dtos.stream()
+                .map(dto -> buildCertificationAchievement(new CertificationAchievement(), user, dto))
+                .collect(Collectors.toList());
+        return certificationAchievementRepository.saveAll(updated).stream()
+                .map(this::mapCertificationAchievement)
+                .collect(Collectors.toList());
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // MAPPERS
     // ─────────────────────────────────────────────────────────────────────────
@@ -667,6 +762,196 @@ public class PortfolioService {
                 .name(about.getName())
                 .roleTitle(about.getRoleTitle())
                 .build();
+    }
+
+    private List<String> normalizeResumeAiSections(List<String> sections) {
+        if (sections == null || sections.isEmpty()) {
+            return List.of();
+        }
+
+        LinkedHashSet<String> unique = new LinkedHashSet<>();
+        for (String section : sections) {
+            String normalized = sanitize(section);
+            if (normalized == null) {
+                continue;
+            }
+            String lower = normalized.toLowerCase(Locale.ROOT);
+            if (!RESUME_AI_BULK_SECTIONS.contains(lower)) {
+                throw new ApiException(
+                        HttpStatus.BAD_REQUEST,
+                        "INVALID_RESUME_AI_SECTION",
+                        "Unsupported Resume AI bulk section: " + normalized
+                );
+            }
+            unique.add(lower);
+        }
+
+        return new ArrayList<>(unique);
+    }
+
+    private List<ResumeAiBulkSectionResultDto> runResumeAiBulkSections(
+            List<String> sections,
+            ResumeAiBulkSectionOperation operation
+    ) {
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        List<ResumeAiBulkSectionResultDto> results = new ArrayList<>();
+        for (String section : sections) {
+            try {
+                Integer processedCount = transactionTemplate.execute(status -> operation.apply(section));
+                results.add(ResumeAiBulkSectionResultDto.builder()
+                        .section(section)
+                        .success(true)
+                        .processedCount(processedCount == null ? 0 : processedCount)
+                        .message("Success")
+                        .build());
+            } catch (Exception exception) {
+                results.add(ResumeAiBulkSectionResultDto.builder()
+                        .section(section)
+                        .success(false)
+                        .processedCount(0)
+                        .message(resolveResumeAiBulkFailureMessage(exception))
+                        .build());
+            }
+        }
+
+        return results;
+    }
+
+    private int deleteResumeAiSection(User user, String section) {
+        return switch (section) {
+            case "projects" -> {
+                List<Project> existing = projectRepository.findByUserId(user.getId());
+                int count = existing.size();
+                projectRepository.deleteAll(existing);
+                yield count;
+            }
+            case "experience" -> {
+                List<Experience> existing = experienceRepository.findByUserId(user.getId());
+                int count = existing.size();
+                experienceRepository.deleteAll(existing);
+                yield count;
+            }
+            case "education" -> {
+                List<Education> existing = educationRepository.findByUserId(user.getId());
+                int count = existing.size();
+                educationRepository.deleteAll(existing);
+                yield count;
+            }
+            case "certifications" -> {
+                List<CertificationAchievement> existing = certificationAchievementRepository.findByUserIdOrderByIdAsc(user.getId());
+                int count = existing.size();
+                certificationAchievementRepository.deleteAll(existing);
+                yield count;
+            }
+            case "skills" -> {
+                List<Skill> existing = skillRepository.findByUserId(user.getId());
+                int count = existing.size();
+                skillRepository.deleteAll(existing);
+                yield count;
+            }
+            default -> throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_RESUME_AI_SECTION",
+                    "Unsupported Resume AI bulk section: " + section
+            );
+        };
+    }
+
+    private int insertResumeAiSection(User user, ResumeAiBulkInsertRequestDto request, String section) {
+        return switch (section) {
+            case "projects" -> insertProjects(user, request.getProjects());
+            case "experience" -> insertExperiences(user, request.getExperience());
+            case "education" -> insertEducations(user, request.getEducation());
+            case "certifications" -> insertCertificationAchievements(user, request.getCertifications());
+            case "skills" -> insertSkills(user, request.getSkills());
+            default -> throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_RESUME_AI_SECTION",
+                    "Unsupported Resume AI bulk section: " + section
+            );
+        };
+    }
+
+    private int insertProjects(User user, List<ProjectDto> dtos) {
+        List<ProjectDto> payloads = dtos == null ? List.of() : dtos;
+        payloads.forEach(this::validateBulkPayload);
+        List<Project> entities = payloads.stream()
+                .map(dto -> buildProject(new Project(), user, dto))
+                .collect(Collectors.toList());
+        return projectRepository.saveAll(entities).size();
+    }
+
+    private int insertExperiences(User user, List<ExperienceDto> dtos) {
+        List<ExperienceDto> payloads = dtos == null ? List.of() : dtos;
+        payloads.forEach(this::validateBulkPayload);
+        List<Experience> entities = payloads.stream()
+                .map(dto -> buildExperience(new Experience(), user, dto))
+                .collect(Collectors.toList());
+        return experienceRepository.saveAll(entities).size();
+    }
+
+    private int insertEducations(User user, List<EducationDto> dtos) {
+        List<EducationDto> payloads = dtos == null ? List.of() : dtos;
+        payloads.forEach(this::validateBulkPayload);
+        List<Education> entities = payloads.stream()
+                .map(dto -> buildEducation(new Education(), user, dto))
+                .collect(Collectors.toList());
+        return educationRepository.saveAll(entities).size();
+    }
+
+    private int insertCertificationAchievements(User user, List<CertificationAchievementDto> dtos) {
+        List<CertificationAchievementDto> payloads = dtos == null ? List.of() : dtos;
+        payloads.forEach(this::validateBulkPayload);
+        List<CertificationAchievement> entities = payloads.stream()
+                .map(dto -> buildCertificationAchievement(new CertificationAchievement(), user, dto))
+                .collect(Collectors.toList());
+        return certificationAchievementRepository.saveAll(entities).size();
+    }
+
+    private int insertSkills(User user, List<SkillDto> dtos) {
+        List<SkillDto> payloads = dtos == null ? List.of() : dtos;
+        payloads.forEach(this::validateBulkPayload);
+        List<Skill> entities = payloads.stream()
+                .map(dto -> buildSkill(new Skill(), user, dto))
+                .collect(Collectors.toList());
+        return skillRepository.saveAll(entities).size();
+    }
+
+    private void validateBulkPayload(Object payload) {
+        List<String> messages = validator.validate(payload).stream()
+                .map(ConstraintViolation::getMessage)
+                .filter(message -> message != null && !message.isBlank())
+                .sorted()
+                .toList();
+
+        if (!messages.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_RESUME_AI_BULK_PAYLOAD", messages.get(0));
+        }
+    }
+
+    private String resolveResumeAiBulkFailureMessage(Exception exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof ApiException apiException) {
+                return apiException.getMessage();
+            }
+            if (current instanceof ResourceNotFoundException resourceNotFoundException) {
+                return resourceNotFoundException.getMessage();
+            }
+            if (current.getMessage() != null && !current.getMessage().isBlank()) {
+                return current.getMessage();
+            }
+            current = current.getCause();
+        }
+
+        return "Resume AI bulk operation failed.";
+    }
+
+    @FunctionalInterface
+    private interface ResumeAiBulkSectionOperation {
+        int apply(String section);
     }
 
     private DesktopWidgetsDto mapDesktopWidgets(DesktopWidgetConfig config) {
@@ -901,6 +1186,32 @@ public class PortfolioService {
                 .scoreLabel(education.getScoreLabel())
                 .scoreValue(education.getScoreValue())
                 .duration(education.getDuration())
+                .build();
+    }
+
+    ExperienceDto mapEducationAsExperience(Education education) {
+        if (education == null) return null;
+        ParsedDuration parsedDuration = parseDuration(education.getDuration());
+        return ExperienceDto.builder()
+                .id(education.getId())
+                .company(education.getInstitute())
+                .roleTitle(education.getDegree())
+                .duration(education.getDuration())
+                .startMonth(parsedDuration.startMonth())
+                .startYear(parsedDuration.startYear())
+                .endMonth(parsedDuration.current() ? null : parsedDuration.endMonth())
+                .endYear(parsedDuration.current() ? null : parsedDuration.endYear())
+                .isCurrent(parsedDuration.current())
+                .responsibilities(List.of())
+                .achievements(List.of())
+                .skills(List.of())
+                .isAcademic(true)
+                .level(education.getLevel())
+                .institute(education.getInstitute())
+                .location(education.getLocation())
+                .degree(education.getDegree())
+                .scoreLabel(education.getScoreLabel())
+                .scoreValue(education.getScoreValue())
                 .build();
     }
 
