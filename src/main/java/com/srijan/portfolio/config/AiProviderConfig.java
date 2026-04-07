@@ -12,7 +12,7 @@ public class AiProviderConfig {
     @Value("${GROQ_API_KEY:}")
     private String groqApiKey;
 
-    @Value("${AI_TIMEOUT_MS:20000}")
+    @Value("${AI_TIMEOUT_MS:60000}")
     private int timeoutMs;
 
     @Value("${RESUME_MAX_SIZE_BYTES:2097152}")

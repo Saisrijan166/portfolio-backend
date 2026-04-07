@@ -334,13 +334,14 @@ public class InternalResumeParser {
 
     // ─── Skills extraction ───────────────────────────────────────────────────
 
-    private List<String> extractSkills(Map<String, List<String>> sections) {
-        List<String> allSkills = new ArrayList<>();
+    private List<ParsedSkill> extractSkills(Map<String, List<String>> sections) {
+        List<ParsedSkill> allSkills = new ArrayList<>();
 
         List<String> lines = sections.get("skills");
         if (lines == null || lines.isEmpty())
             return allSkills;
 
+        Set<String> seen = new HashSet<>();
         for (String line : lines) {
             if (line.isEmpty())
                 continue;
@@ -355,12 +356,14 @@ public class InternalResumeParser {
             for (String part : parts) {
                 String skill = part.replaceAll("^[\\-*►▪●○◆→\\s]+", "").trim();
                 if (!skill.isEmpty() && skill.length() < 60 && skill.length() > 1) {
-                    allSkills.add(skill);
+                    if (seen.add(skill.toLowerCase())) {
+                        allSkills.add(ParsedSkill.builder().name(skill).domain("General").metaSkill(false).build());
+                    }
                 }
             }
         }
 
-        return allSkills.stream().distinct().collect(Collectors.toList());
+        return allSkills;
     }
 
     // ─── Experience extraction ───────────────────────────────────────────────

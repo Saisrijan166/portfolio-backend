@@ -27,7 +27,7 @@ public class ResumeParseResponseDto {
     private String experienceYears;
 
     // Skills
-    private List<String> skills;
+    private List<ParsedSkill> skills;
 
     // Experience
     private List<ParsedExperience> experience;
@@ -135,5 +135,16 @@ public class ResumeParseResponseDto {
     public static class ParsedPrinciple {
         private String title;
         private String description;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ParsedSkill {
+        private String name;
+        private String domain;
+        private boolean metaSkill;
+        private String metaDescription;
     }
 }
