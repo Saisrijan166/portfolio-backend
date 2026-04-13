@@ -14,42 +14,49 @@ public class ResumeValidator {
             return null;
         }
 
-        resume.setName(cleanString(resume.getName()));
-        resume.setEmail(cleanString(resume.getEmail()));
-        resume.setPhone(cleanString(resume.getPhone()));
-        resume.setLocation(cleanString(resume.getLocation()));
-        resume.setHeadline(cleanString(resume.getHeadline()));
-        resume.setSummary(cleanString(resume.getSummary()));
-        resume.setAvailability(cleanString(resume.getAvailability()));
-        resume.setExperienceYears(cleanString(resume.getExperienceYears()));
-        resume.setLinkedinUrl(cleanString(resume.getLinkedinUrl()));
-        resume.setGithubUrl(cleanString(resume.getGithubUrl()));
-        resume.setWebsiteUrl(cleanString(resume.getWebsiteUrl()));
-        resume.setAbout(cleanStrings(resume.getAbout()));
-        resume.setSkills(resume.getSkills() == null ? new ArrayList<>() : resume.getSkills());
-        resume.setExperience(resume.getExperience() == null ? new ArrayList<>() : resume.getExperience());
-        resume.setEducation(resume.getEducation() == null ? new ArrayList<>() : resume.getEducation());
-        resume.setProjects(resume.getProjects() == null ? new ArrayList<>() : resume.getProjects());
-        resume.setCertificationAchievements(resume.getCertificationAchievements() == null ? new ArrayList<>() : resume.getCertificationAchievements());
-        resume.setOtherLinks(resume.getOtherLinks() == null ? new ArrayList<>() : resume.getOtherLinks());
-        resume.setPrinciples(resume.getPrinciples() == null ? new ArrayList<>() : resume.getPrinciples());
-        resume.setProvider(cleanString(resume.getProvider()));
-        return resume;
+        return ResumeParseResponseDto.builder()
+                .name(cleanString(resume.getName()))
+                .email(cleanString(resume.getEmail()))
+                .phone(cleanString(resume.getPhone()))
+                .location(cleanString(resume.getLocation()))
+                .headline(cleanString(resume.getHeadline()))
+                .summary(cleanString(resume.getSummary()))
+                .about(cleanStrings(resume.getAbout()))
+                .availability(cleanString(resume.getAvailability()))
+                .experienceYears(cleanString(resume.getExperienceYears()))
+                .skills(resume.getSkills() == null ? new ArrayList<>() : new ArrayList<>(resume.getSkills()))
+                .experience(resume.getExperience() == null ? new ArrayList<>() : new ArrayList<>(resume.getExperience()))
+                .education(resume.getEducation() == null ? new ArrayList<>() : new ArrayList<>(resume.getEducation()))
+                .projects(resume.getProjects() == null ? new ArrayList<>() : new ArrayList<>(resume.getProjects()))
+                .certificationAchievements(resume.getCertificationAchievements() == null ? new ArrayList<>() : new ArrayList<>(resume.getCertificationAchievements()))
+                .linkedinUrl(cleanString(resume.getLinkedinUrl()))
+                .githubUrl(cleanString(resume.getGithubUrl()))
+                .websiteUrl(cleanString(resume.getWebsiteUrl()))
+                .otherLinks(resume.getOtherLinks() == null ? new ArrayList<>() : new ArrayList<>(resume.getOtherLinks()))
+                .principles(resume.getPrinciples() == null ? new ArrayList<>() : new ArrayList<>(resume.getPrinciples()))
+                .provider(cleanString(resume.getProvider()))
+                .build();
     }
 
     public boolean isValid(ResumeParseResponseDto resume) {
-        if (resume == null) {
+        if (resume == null
+                || resume.getSkills() == null
+                || resume.getEducation() == null
+                || resume.getExperience() == null
+                || resume.getProjects() == null
+                || resume.getCertificationAchievements() == null
+                || resume.getOtherLinks() == null
+                || resume.getPrinciples() == null) {
             return false;
         }
 
-        ResumeParseResponseDto cleaned = clean(resume);
-        return cleaned.getSkills() != null
-                && cleaned.getEducation() != null
-                && cleaned.getExperience() != null
-                && cleaned.getProjects() != null
-                && cleaned.getCertificationAchievements() != null
-                && cleaned.getOtherLinks() != null
-                && cleaned.getPrinciples() != null;
+        return hasText(resume.getName())
+                || hasText(resume.getEmail())
+                || hasText(resume.getPhone())
+                || hasText(resume.getHeadline())
+                || !resume.getSkills().isEmpty()
+                || !resume.getExperience().isEmpty()
+                || !resume.getEducation().isEmpty();
     }
 
     private String cleanString(String value) {
@@ -67,6 +74,10 @@ public class ResumeValidator {
         return values.stream()
                 .map(this::cleanString)
                 .filter(value -> value != null && !value.isBlank())
-                .toList();
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isBlank();
     }
 }

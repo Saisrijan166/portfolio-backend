@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,
+                                "/api/ai/summarize-section",
                                 "/api/public/portfolio/*/feedback",
                                 "/api/public/portfolio/*/feedback/platform",
                                 "/api/public/portfolio/*/contact/message"

@@ -6,7 +6,6 @@ import com.srijan.portfolio.dto.ResumeParseResponseDto;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class ResumePromptFactory {
@@ -25,6 +24,7 @@ public class ResumePromptFactory {
                 DO NOT add extra fields.
                 If a value is missing, return null for scalars and [] for arrays.
                 Arrays must never be null.
+                Note for skills: For 'metaSkill' (identify from skills), set it to true for soft skills, interpersonal skills, meta skills likewise. Otherwise false. If true, provide context related to the skill in 'metaDescription'.
                 Use this exact schema:
                 {
                   "name": "",
@@ -116,6 +116,22 @@ public class ResumePromptFactory {
     }
 
     public String buildSectionRegenerationPrompt(List<String> sections, ResumeParseResponseDto existingResume) {
+        if (existingResume == null) {
+            throw new IllegalArgumentException("Existing resume is required for section regeneration");
+        }
+        if (sections == null || sections.isEmpty()) {
+            throw new IllegalArgumentException("At least one section is required for section regeneration");
+        }
+
+        List<String> sanitizedSections = sections.stream()
+                .filter(section -> section != null && !section.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+        if (sanitizedSections.isEmpty()) {
+            throw new IllegalArgumentException("At least one non-empty section is required for section regeneration");
+        }
+
         return """
                 Improve ONLY the requested sections of the existing parsed resume.
                 Return ONLY valid JSON.
@@ -128,10 +144,13 @@ public class ResumePromptFactory {
                 Return a partial JSON object containing only these top-level keys when requested:
                 skills, experience, education, projects, certificationAchievements, summary, about, principles, headline.
                 Arrays must never be null.
-                """.formatted(String.join(", ", sections), writeJson(existingResume));
+                """.formatted(String.join(", ", sanitizedSections), writeJson(existingResume));
     }
 
     public String buildResumeScoringPrompt(ResumeParseResponseDto resume) {
+        if (resume == null) {
+            throw new IllegalArgumentException("Resume is required for scoring");
+        }
         return """
                 Score this resume from 0 to 100 for professional clarity, quantified impact, completeness, and action-oriented writing.
                 Return ONLY valid JSON with this exact schema:

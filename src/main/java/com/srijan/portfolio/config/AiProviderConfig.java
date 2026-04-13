@@ -12,7 +12,7 @@ public class AiProviderConfig {
     @Value("${GEMINI_API_KEY:}")
     private String geminiApiKey;
 
-    @Value("${GROQ_API_KEY:}")
+    @Value("${GROQ_SUMMARIZE_API_KEY:${GROQ_API_KEY:}}")
     private String groqApiKey;
 
     @Value("${AI_TIMEOUT_MS:60000}")

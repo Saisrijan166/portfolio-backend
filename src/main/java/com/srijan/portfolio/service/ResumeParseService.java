@@ -1,7 +1,7 @@
 package com.srijan.portfolio.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srijan.portfolio.config.AiProviderConfig;
-import com.srijan.portfolio.dto.ResumeJobResponseDto;
 import com.srijan.portfolio.dto.ResumeRegenerateRequestDto;
 import com.srijan.portfolio.dto.ResumeParseResponseDto;
 import com.srijan.portfolio.dto.ResumeScoreDto;
@@ -38,6 +38,7 @@ public class ResumeParseService {
     private final ResumePromptFactory resumePromptFactory;
     private final ResumeAiCacheService resumeAiCacheService;
     private final ResumeScoringService resumeScoringService;
+    private final ObjectMapper objectMapper;
 
     public ResumeParseService(
             ResumeTextExtractor textExtractor,
@@ -47,7 +48,8 @@ public class ResumeParseService {
             ResumeValidator resumeValidator,
             ResumePromptFactory resumePromptFactory,
             ResumeAiCacheService resumeAiCacheService,
-            ResumeScoringService resumeScoringService) {
+            ResumeScoringService resumeScoringService,
+            ObjectMapper objectMapper) {
         this.textExtractor = textExtractor;
         this.internalParser = internalParser;
         this.config = config;
@@ -56,6 +58,7 @@ public class ResumeParseService {
         this.resumePromptFactory = resumePromptFactory;
         this.resumeAiCacheService = resumeAiCacheService;
         this.resumeScoringService = resumeScoringService;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -98,8 +101,9 @@ public class ResumeParseService {
                 .orElse(null);
         if (cached != null) {
             log.info("resume.parse.cache_hit hash={}", resumeHash);
-            cached.setProvider(firstNonBlank(cached.getProvider(), "cache"));
-            return cached;
+            ResumeParseResponseDto cachedCopy = resumeValidator.clean(cached);
+            cachedCopy.setProvider(firstNonBlank(cachedCopy.getProvider(), "cache"));
+            return cachedCopy;
         }
 
         // ─── Try AI providers in priority order via orchestrator ────────────
@@ -130,6 +134,12 @@ public class ResumeParseService {
     }
 
     public ResumeParseResponseDto regenerateSections(ResumeRegenerateRequestDto request) {
+        if (request == null || request.getExistingResume() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REGENERATION_REQUEST", "Existing resume data is required");
+        }
+        if (request.getSections() == null || request.getSections().isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_REGENERATION_REQUEST", "At least one section is required");
+        }
         if (request.getSections().size() > config.getMaxRegeneratedSections()) {
             throw new ApiException(
                     HttpStatus.BAD_REQUEST,
@@ -142,7 +152,7 @@ public class ResumeParseService {
         ResumeParseResponseDto cached = resumeAiCacheService.read("resume-regenerate", cacheHash, ResumeParseResponseDto.class)
                 .orElse(null);
         if (cached != null) {
-            return cached;
+            return resumeValidator.clean(cached);
         }
 
         String rawJson = aiOrchestratorService.generateJson(
@@ -152,8 +162,12 @@ public class ResumeParseService {
         );
 
         try {
-            ResumeParseResponseDto merged = new com.fasterxml.jackson.databind.ObjectMapper()
-                    .readerForUpdating(request.getExistingResume())
+            ResumeParseResponseDto baseCopy = objectMapper.readValue(
+                    objectMapper.writeValueAsBytes(request.getExistingResume()),
+                    ResumeParseResponseDto.class
+            );
+            ResumeParseResponseDto merged = objectMapper
+                    .readerForUpdating(baseCopy)
                     .readValue(rawJson, ResumeParseResponseDto.class);
             ResumeParseResponseDto cleaned = resumeValidator.clean(merged);
             resumeAiCacheService.write("resume-regenerate", cacheHash, cleaned);

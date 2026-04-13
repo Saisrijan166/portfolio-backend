@@ -78,6 +78,15 @@ public class GeminiAiProvider implements AiProvider {
 
   @Override
   public String generateJson(String systemPrompt, String userPrompt) throws IOException {
+    return generateContent(systemPrompt, userPrompt, true);
+  }
+
+  @Override
+  public String generateText(String systemPrompt, String userPrompt) throws IOException {
+    return generateContent(systemPrompt, userPrompt, false);
+  }
+
+  private String generateContent(String systemPrompt, String userPrompt, boolean jsonResponse) throws IOException {
     String requestJson = """
         {
           "contents": [{
@@ -87,13 +96,13 @@ public class GeminiAiProvider implements AiProvider {
             ]
           }],
           "generationConfig": {
-            "temperature": 0.1,
-            "responseMimeType": "application/json"
+            "temperature": 0.1%s
           }
         }
         """.formatted(
             objectMapper.writeValueAsString(systemPrompt),
-            objectMapper.writeValueAsString(userPrompt)
+            objectMapper.writeValueAsString(userPrompt),
+            jsonResponse ? ",\n            \"responseMimeType\": \"application/json\"" : ""
     );
 
     Request request = new Request.Builder()
@@ -111,11 +120,11 @@ public class GeminiAiProvider implements AiProvider {
       }
       JsonNode root = objectMapper.readTree(body.string());
       JsonNode parts = root.path("candidates").path(0).path("content").path("parts");
-      String jsonText = parts.path(0).path("text").asText("");
-      if (jsonText.isBlank()) {
+      String text = parts.path(0).path("text").asText("");
+      if (text.isBlank()) {
         throw new IOException("Gemini returned empty text content");
       }
-      return stripMarkdownCodeFence(jsonText);
+      return stripMarkdownCodeFence(text);
     }
   }
 

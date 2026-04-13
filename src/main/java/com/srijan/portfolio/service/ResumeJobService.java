@@ -13,7 +13,6 @@ import com.srijan.portfolio.repository.ResumeJobRepository;
 import com.srijan.portfolio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,8 +22,7 @@ public class ResumeJobService {
 
     private final ResumeJobRepository resumeJobRepository;
     private final UserRepository userRepository;
-    private final ResumeParseService resumeParseService;
-    private final ResumeScoringService resumeScoringService;
+    private final ResumeJobAsyncProcessor resumeJobAsyncProcessor;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -38,40 +36,13 @@ public class ResumeJobService {
                 .cached(false)
                 .build());
 
-        processJobAsync(job.getId(), request);
+        resumeJobAsyncProcessor.processJobAsync(job.getId(), request);
 
         return ResumeJobResponseDto.builder()
                 .jobId(job.getId())
                 .status(job.getStatus())
                 .cached(false)
                 .build();
-    }
-
-    @Async("resumeTaskExecutor")
-    public void processJobAsync(Long jobId, ResumeParseRequestDto request) {
-        ResumeJob job = resumeJobRepository.findById(jobId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "RESUME_JOB_NOT_FOUND", "Resume job not found"));
-
-        try {
-            job.setStatus("PROCESSING");
-            resumeJobRepository.save(job);
-
-            ResumeParseResponseDto result = resumeParseService.parseResume(
-                    request.getFileBase64(),
-                    request.getFileType(),
-                    request.getFileName()
-            );
-            ResumeScoreDto score = resumeScoringService.score(result);
-
-            job.setStatus("COMPLETED");
-            job.setResult(objectMapper.writeValueAsString(result));
-            job.setScore(objectMapper.writeValueAsString(score));
-            resumeJobRepository.save(job);
-        } catch (Exception exception) {
-            job.setStatus("FAILED");
-            job.setError(exception.getMessage());
-            resumeJobRepository.save(job);
-        }
     }
 
     @Transactional(readOnly = true)

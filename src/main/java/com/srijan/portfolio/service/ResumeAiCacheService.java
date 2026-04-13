@@ -2,10 +2,13 @@ package com.srijan.portfolio.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.srijan.portfolio.entity.ResumeAiCacheEntry;
 import com.srijan.portfolio.repository.ResumeAiCacheRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -33,12 +36,14 @@ public class ResumeAiCacheService {
         }
     }
 
+    @Transactional(readOnly = true)
     public <T> Optional<T> read(String cacheType, String cacheHash, Class<T> targetType) {
         return resumeAiCacheRepository.findByCacheKey(buildCacheKey(cacheType, cacheHash))
                 .map(ResumeAiCacheEntry::getResponseJson)
                 .flatMap(json -> deserialize(json, targetType));
     }
 
+    @Transactional
     public void write(String cacheType, String cacheHash, Object payload) {
         try {
             String cacheKey = buildCacheKey(cacheType, cacheHash);
@@ -47,7 +52,7 @@ public class ResumeAiCacheService {
                             .cacheKey(cacheKey)
                             .cacheType(cacheType)
                             .build());
-            entry.setResponseJson(objectMapper.writeValueAsString(payload));
+            entry.setResponseJson(canonicalMapper().writeValueAsString(payload));
             resumeAiCacheRepository.save(entry);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Failed to serialize resume AI cache payload", exception);
@@ -56,7 +61,7 @@ public class ResumeAiCacheService {
 
     public String hashObject(Object value) {
         try {
-            return sha256(objectMapper.writeValueAsString(value));
+            return sha256(canonicalMapper().writeValueAsString(value));
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Failed to hash cache payload", exception);
         }
@@ -68,9 +73,16 @@ public class ResumeAiCacheService {
 
     private <T> Optional<T> deserialize(String json, Class<T> targetType) {
         try {
-            return Optional.of(objectMapper.readValue(json, targetType));
+            if (json == null) return Optional.empty();
+            return Optional.ofNullable(objectMapper.readValue(json, targetType));
         } catch (JsonProcessingException exception) {
             return Optional.empty();
         }
+    }
+
+    private ObjectMapper canonicalMapper() {
+        return objectMapper.copy()
+                .configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true)
+                .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
     }
 }

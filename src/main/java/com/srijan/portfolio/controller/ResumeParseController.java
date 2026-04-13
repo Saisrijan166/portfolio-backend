@@ -35,6 +35,7 @@ public class ResumeParseController {
     public ResponseEntity<ApiResponse<ResumeParseResponseDto>> parseResume(
             Authentication auth,
             @Valid @RequestBody ResumeParseRequestDto request) {
+        requireAuthenticatedUsername(auth);
         ResumeParseResponseDto result = resumeParseService.parseResume(
                 request.getFileBase64(),
                 request.getFileType(),
@@ -67,6 +68,7 @@ public class ResumeParseController {
     public ResponseEntity<ApiResponse<ResumeParseResponseDto>> regenerateSelectedSections(
             Authentication auth,
             @Valid @RequestBody ResumeRegenerateRequestDto request) {
+        requireAuthenticatedUsername(auth);
         return ApiResponses.ok(
                 resumeParseService.regenerateSections(request),
                 "Selected resume sections regenerated successfully"
@@ -77,6 +79,7 @@ public class ResumeParseController {
     public ResponseEntity<ApiResponse<ResumeScoreDto>> scoreResume(
             Authentication auth,
             @Valid @RequestBody ResumeParseResponseDto request) {
+        requireAuthenticatedUsername(auth);
         return ApiResponses.ok(
                 resumeParseService.scoreResume(request),
                 "Resume scored successfully"
@@ -111,5 +114,16 @@ public class ResumeParseController {
                 portfolioService.bulkReplaceResumeAiSections(auth.getName(), request),
                 "Resume AI bulk replace completed"
         );
+    }
+
+    private String requireAuthenticatedUsername(Authentication auth) {
+        if (auth == null || auth.getName() == null || auth.getName().isBlank()) {
+            throw new com.srijan.portfolio.exception.ApiException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED,
+                    "UNAUTHORIZED",
+                    "Authentication is required"
+            );
+        }
+        return auth.getName();
     }
 }

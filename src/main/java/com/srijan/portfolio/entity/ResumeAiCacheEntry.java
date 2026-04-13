@@ -22,7 +22,7 @@ public class ResumeAiCacheEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 64, unique = true)
+    @Column(nullable = false, length = 128, unique = true)
     private String cacheKey;
 
     @Column(nullable = false, length = 64)

@@ -28,6 +28,10 @@ public interface AiProvider {
      */
     ResumeParseResponseDto parseResume(byte[] fileBytes, String fileType, String extractedText) throws IOException;
 
+    default String generateText(String systemPrompt, String userPrompt) throws IOException {
+        throw new IOException("Provider does not support generic text generation");
+    }
+
     default String generateJson(String systemPrompt, String userPrompt) throws IOException {
         throw new IOException("Provider does not support generic JSON generation");
     }

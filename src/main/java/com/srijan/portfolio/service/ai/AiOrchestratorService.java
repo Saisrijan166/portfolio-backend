@@ -6,10 +6,10 @@ import com.srijan.portfolio.exception.ApiException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -25,6 +25,8 @@ public class AiOrchestratorService {
 
     private final List<AiProvider> aiProviders;
     private final AiProviderConfig config;
+    @Qualifier("aiOrchestratorExecutor")
+    private final ExecutorService aiOrchestratorExecutor;
 
     public ResumeParseResponseDto parseResume(
             byte[] fileBytes,
@@ -36,6 +38,10 @@ public class AiOrchestratorService {
 
     public String generateJson(String systemPrompt, String userPrompt, Predicate<String> validator) {
         return runWithFallback(provider -> provider.generateJson(systemPrompt, userPrompt), validator);
+    }
+
+    public String generateText(String systemPrompt, String userPrompt, Predicate<String> validator) {
+        return runWithFallback(provider -> provider.generateText(systemPrompt, userPrompt), validator);
     }
 
     private <T> T runWithFallback(ProviderCallback<T> callback, Predicate<T> validator) {
@@ -75,7 +81,7 @@ public class AiOrchestratorService {
         throw new ApiException(
                 HttpStatus.BAD_GATEWAY,
                 "AI_PROVIDER_FAILURE",
-                "All AI providers failed. " + String.join("; ", failures)
+                "All AI providers failed. Please try again shortly."
         );
     }
 
@@ -90,24 +96,18 @@ public class AiOrchestratorService {
     }
 
     private <T> T executeWithTimeout(AiProvider provider, Callable<T> callable) throws Exception {
-        ExecutorService executor = Executors.newSingleThreadExecutor(runnable -> {
-            Thread thread = new Thread(runnable);
-            thread.setName("ai-provider-" + provider.getName());
-            thread.setDaemon(true);
-            return thread;
-        });
-
+        Future<T> future = aiOrchestratorExecutor.submit(callable);
         try {
-            Future<T> future = executor.submit(callable);
             return future.get(config.getTimeoutMs(), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException exception) {
+            future.cancel(true);
+            throw exception;
         } catch (ExecutionException exception) {
             Throwable cause = exception.getCause();
             if (cause instanceof Exception inner) {
                 throw inner;
             }
             throw new IllegalStateException("Unexpected AI provider failure", cause);
-        } finally {
-            executor.shutdownNow();
         }
     }
 

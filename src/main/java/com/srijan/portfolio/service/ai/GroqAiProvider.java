@@ -57,7 +57,7 @@ public class GroqAiProvider implements AiProvider {
 
         String requestJson;
         try {
-            requestJson = buildGroqRequest(resumePromptFactory.buildResumeExtractionPrompt(), extractedText);
+            requestJson = buildGroqJsonRequest(resumePromptFactory.buildResumeExtractionPrompt(), extractedText);
         } catch (Exception e) {
             throw new IOException("Failed to build Groq request: " + e.getMessage(), e);
         }
@@ -91,7 +91,7 @@ public class GroqAiProvider implements AiProvider {
                     .url(GROQ_URL)
                     .addHeader("Authorization", "Bearer " + config.getGroqApiKey())
                     .addHeader("Content-Type", "application/json")
-                    .post(RequestBody.create(buildGroqRequest(systemPrompt, userPrompt), MediaType.parse("application/json")))
+                    .post(RequestBody.create(buildGroqJsonRequest(systemPrompt, userPrompt), MediaType.parse("application/json")))
                     .build();
 
             try (Response response = httpClient.newCall(request).execute()) {
@@ -116,13 +116,57 @@ public class GroqAiProvider implements AiProvider {
         }
     }
 
-    private String buildGroqRequest(String systemPrompt, String userPrompt) throws Exception {
+    @Override
+    public String generateText(String systemPrompt, String userPrompt) throws IOException {
+        try {
+            Request request = new Request.Builder()
+                    .url(GROQ_URL)
+                    .addHeader("Authorization", "Bearer " + config.getGroqApiKey())
+                    .addHeader("Content-Type", "application/json")
+                    .post(RequestBody.create(buildGroqTextRequest(systemPrompt, userPrompt), MediaType.parse("application/json")))
+                    .build();
+
+            try (Response response = httpClient.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    throw new IOException("Groq API error: HTTP " + response.code());
+                }
+                ResponseBody body = response.body();
+                if (body == null) {
+                    throw new IOException("Groq returned empty response body");
+                }
+                JsonNode root = objectMapper.readTree(body.string());
+                String text = root.path("choices").path(0).path("message").path("content").asText("");
+                if (text.isBlank()) {
+                    throw new IOException("Groq returned empty message content");
+                }
+                return stripMarkdownCodeFence(text);
+            }
+        } catch (IOException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new IOException("Failed to call Groq text generation: " + exception.getMessage(), exception);
+        }
+    }
+
+    private String buildGroqJsonRequest(String systemPrompt, String userPrompt) throws Exception {
+        return buildGroqRequest(systemPrompt, userPrompt, true);
+    }
+
+    private String buildGroqTextRequest(String systemPrompt, String userPrompt) throws Exception {
+        return buildGroqRequest(systemPrompt, userPrompt, false);
+    }
+
+    private String buildGroqRequest(String systemPrompt, String userPrompt, boolean jsonResponse) throws Exception {
         // Truncate very long texts to stay within token limits
         String text = userPrompt.length() > 12000 ? userPrompt.substring(0, 12000) : userPrompt;
 
         // Build JSON manually to handle escaping properly
         String escapedText = objectMapper.writeValueAsString(text);
         String escapedSystem = objectMapper.writeValueAsString(systemPrompt);
+        String responseFormat = jsonResponse ? """
+                  ,
+                  "response_format": {"type": "json_object"}
+                """ : "";
 
         return """
                 {
@@ -132,10 +176,9 @@ public class GroqAiProvider implements AiProvider {
                     {"role": "user", "content": %s}
                   ],
                   "temperature": 0.1,
-                  "max_tokens": 4096,
-                  "response_format": {"type": "json_object"}
+                  "max_tokens": 4096%s
                 }
-                """.formatted(escapedSystem, escapedText);
+                """.formatted(escapedSystem, escapedText, responseFormat);
     }
 
     private ResumeParseResponseDto parseGroqResponse(String responseBody) throws IOException {
