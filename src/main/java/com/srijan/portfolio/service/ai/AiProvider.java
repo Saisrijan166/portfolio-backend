@@ -27,4 +27,8 @@ public interface AiProvider {
      * @throws IOException if parsing or API communication fails
      */
     ResumeParseResponseDto parseResume(byte[] fileBytes, String fileType, String extractedText) throws IOException;
+
+    default String generateJson(String systemPrompt, String userPrompt) throws IOException {
+        throw new IOException("Provider does not support generic JSON generation");
+    }
 }

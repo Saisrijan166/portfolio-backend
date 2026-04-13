@@ -4,9 +4,13 @@ import com.srijan.portfolio.dto.ApiResponse;
 import com.srijan.portfolio.dto.ResumeAiBulkDeleteRequestDto;
 import com.srijan.portfolio.dto.ResumeAiBulkInsertRequestDto;
 import com.srijan.portfolio.dto.ResumeAiBulkMutationResponseDto;
+import com.srijan.portfolio.dto.ResumeJobResponseDto;
 import com.srijan.portfolio.dto.ResumeParseRequestDto;
 import com.srijan.portfolio.dto.ResumeParseResponseDto;
+import com.srijan.portfolio.dto.ResumeRegenerateRequestDto;
+import com.srijan.portfolio.dto.ResumeScoreDto;
 import com.srijan.portfolio.service.PortfolioService;
+import com.srijan.portfolio.service.ResumeJobService;
 import com.srijan.portfolio.service.ResumeParseService;
 import com.srijan.portfolio.util.ApiResponses;
 import jakarta.validation.Valid;
@@ -22,7 +26,11 @@ public class ResumeParseController {
 
     private final PortfolioService portfolioService;
     private final ResumeParseService resumeParseService;
+    private final ResumeJobService resumeJobService;
 
+    /**
+     * Legacy synchronous endpoint kept for backward compatibility.
+     */
     @PostMapping("/parse")
     public ResponseEntity<ApiResponse<ResumeParseResponseDto>> parseResume(
             Authentication auth,
@@ -33,6 +41,46 @@ public class ResumeParseController {
                 request.getFileName());
 
         return ApiResponses.ok(result, "Resume parsed successfully");
+    }
+
+    @PostMapping("/parse/jobs")
+    public ResponseEntity<ApiResponse<ResumeJobResponseDto>> createParseJob(
+            Authentication auth,
+            @Valid @RequestBody ResumeParseRequestDto request) {
+        return ApiResponses.ok(
+                resumeJobService.createJob(auth.getName(), request),
+                "Resume parsing job created"
+        );
+    }
+
+    @GetMapping("/job/{id}")
+    public ResponseEntity<ApiResponse<ResumeJobResponseDto>> getResumeJob(
+            Authentication auth,
+            @PathVariable Long id) {
+        return ApiResponses.ok(
+                resumeJobService.getJob(auth.getName(), id),
+                "Resume job fetched successfully"
+        );
+    }
+
+    @PostMapping("/regenerate")
+    public ResponseEntity<ApiResponse<ResumeParseResponseDto>> regenerateSelectedSections(
+            Authentication auth,
+            @Valid @RequestBody ResumeRegenerateRequestDto request) {
+        return ApiResponses.ok(
+                resumeParseService.regenerateSections(request),
+                "Selected resume sections regenerated successfully"
+        );
+    }
+
+    @PostMapping("/score")
+    public ResponseEntity<ApiResponse<ResumeScoreDto>> scoreResume(
+            Authentication auth,
+            @Valid @RequestBody ResumeParseResponseDto request) {
+        return ApiResponses.ok(
+                resumeParseService.scoreResume(request),
+                "Resume scored successfully"
+        );
     }
 
     @PostMapping("/bulk-delete")

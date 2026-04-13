@@ -1,7 +1,10 @@
 package com.srijan.portfolio.service;
 
 import com.srijan.portfolio.config.AiProviderConfig;
+import com.srijan.portfolio.dto.ResumeJobResponseDto;
+import com.srijan.portfolio.dto.ResumeRegenerateRequestDto;
 import com.srijan.portfolio.dto.ResumeParseResponseDto;
+import com.srijan.portfolio.dto.ResumeScoreDto;
 import com.srijan.portfolio.exception.ApiException;
 import com.srijan.portfolio.service.ai.*;
 import org.slf4j.Logger;
@@ -10,39 +13,49 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.Base64;
-import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * Orchestrator for resume parsing with tri-level fallback:
- * 1. Gemini (multimodal — reads the file directly)
- * 2. Groq (text-only — receives extracted text)
- * 3. Internal parser (regex/heuristic — no AI)
+ * Production-grade resume parsing service with:
+ * - secure file validation
+ * - AI orchestration with fallback + retry
+ * - validation and cache layer
+ * - internal parser fallback
  */
 @Service
 public class ResumeParseService {
 
     private static final Logger log = LoggerFactory.getLogger(ResumeParseService.class);
 
-    private static final Set<String> SUPPORTED_TYPES = Set.of("pdf", "docx");
     private static final long DEFAULT_MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
-    private final List<AiProvider> aiProviders;
     private final ResumeTextExtractor textExtractor;
     private final InternalResumeParser internalParser;
     private final AiProviderConfig config;
+    private final AiOrchestratorService aiOrchestratorService;
+    private final ResumeValidator resumeValidator;
+    private final ResumePromptFactory resumePromptFactory;
+    private final ResumeAiCacheService resumeAiCacheService;
+    private final ResumeScoringService resumeScoringService;
 
     public ResumeParseService(
-            GeminiAiProvider geminiProvider,
-            GroqAiProvider groqProvider,
             ResumeTextExtractor textExtractor,
             InternalResumeParser internalParser,
-            AiProviderConfig config) {
-        // Order matters: primary first, then fallbacks
-        this.aiProviders = List.of(geminiProvider, groqProvider);
+            AiProviderConfig config,
+            AiOrchestratorService aiOrchestratorService,
+            ResumeValidator resumeValidator,
+            ResumePromptFactory resumePromptFactory,
+            ResumeAiCacheService resumeAiCacheService,
+            ResumeScoringService resumeScoringService) {
         this.textExtractor = textExtractor;
         this.internalParser = internalParser;
         this.config = config;
+        this.aiOrchestratorService = aiOrchestratorService;
+        this.resumeValidator = resumeValidator;
+        this.resumePromptFactory = resumePromptFactory;
+        this.resumeAiCacheService = resumeAiCacheService;
+        this.resumeScoringService = resumeScoringService;
     }
 
     /**
@@ -55,9 +68,10 @@ public class ResumeParseService {
         }
 
         String normalizedType = normalizeFileType(fileType, fileName);
-        if (!SUPPORTED_TYPES.contains(normalizedType)) {
+        Set<String> supportedTypes = Set.copyOf(config.getAllowedTypes());
+        if (!supportedTypes.contains(normalizedType)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "UNSUPPORTED_TYPE",
-                    "Unsupported file type. Only PDF and DOCX are supported.");
+                    "Unsupported file type. Supported types: " + supportedTypes.stream().collect(Collectors.joining(", ")));
         }
 
         byte[] fileBytes;
@@ -73,26 +87,34 @@ public class ResumeParseService {
                     "File size exceeds the maximum allowed (" + (maxSize / 1024 / 1024) + " MB)");
         }
 
+        validateMagicBytes(fileBytes, normalizedType);
+
         // ─── Extract text (needed for Groq and internal parser) ──────────────
         String extractedText = textExtractor.extractText(fileBytes, normalizedType);
+        String resumeHash = resumeAiCacheService.sha256(extractedText);
 
-        // ─── Try AI providers in order ───────────────────────────────────────
-        for (AiProvider provider : aiProviders) {
-            if (!provider.isAvailable()) {
-                log.info("Provider {} not available, skipping", provider.getName());
-                continue;
-            }
+        ResumeParseResponseDto cached = resumeAiCacheService.read("resume-parse", resumeHash, ResumeParseResponseDto.class)
+                .map(resumeValidator::clean)
+                .orElse(null);
+        if (cached != null) {
+            log.info("resume.parse.cache_hit hash={}", resumeHash);
+            cached.setProvider(firstNonBlank(cached.getProvider(), "cache"));
+            return cached;
+        }
 
-            try {
-                log.info("Trying provider: {}", provider.getName());
-                ResumeParseResponseDto result = provider.parseResume(fileBytes, normalizedType, extractedText);
-                if (result != null) {
-                    log.info("Successfully parsed resume with provider: {}", provider.getName());
-                    return result;
-                }
-            } catch (Exception e) {
-                log.warn("Provider {} failed: {}", provider.getName(), e.getMessage());
-            }
+        // ─── Try AI providers in priority order via orchestrator ────────────
+        try {
+            ResumeParseResponseDto aiResult = aiOrchestratorService.parseResume(
+                    fileBytes,
+                    normalizedType,
+                    extractedText,
+                    resumeValidator::isValid
+            );
+            ResumeParseResponseDto validated = resumeValidator.clean(aiResult);
+            resumeAiCacheService.write("resume-parse", resumeHash, validated);
+            return validated;
+        } catch (ApiException exception) {
+            log.warn("resume.parse.ai_failed reason={}", exception.getMessage());
         }
 
         // ─── Final fallback: internal parser ─────────────────────────────────
@@ -102,7 +124,47 @@ public class ResumeParseService {
                     "Could not extract text from the file. Please try a different file format.");
         }
 
-        return internalParser.parse(extractedText);
+        ResumeParseResponseDto fallback = resumeValidator.clean(internalParser.parse(extractedText));
+        resumeAiCacheService.write("resume-parse", resumeHash, fallback);
+        return fallback;
+    }
+
+    public ResumeParseResponseDto regenerateSections(ResumeRegenerateRequestDto request) {
+        if (request.getSections().size() > config.getMaxRegeneratedSections()) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "TOO_MANY_SECTION_REQUESTS",
+                    "Too many sections requested for regeneration"
+            );
+        }
+
+        String cacheHash = resumeAiCacheService.hashObject(request);
+        ResumeParseResponseDto cached = resumeAiCacheService.read("resume-regenerate", cacheHash, ResumeParseResponseDto.class)
+                .orElse(null);
+        if (cached != null) {
+            return cached;
+        }
+
+        String rawJson = aiOrchestratorService.generateJson(
+                "You improve resume sections while preserving facts.",
+                resumePromptFactory.buildSectionRegenerationPrompt(request.getSections(), request.getExistingResume()),
+                this::isJsonObject
+        );
+
+        try {
+            ResumeParseResponseDto merged = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readerForUpdating(request.getExistingResume())
+                    .readValue(rawJson, ResumeParseResponseDto.class);
+            ResumeParseResponseDto cleaned = resumeValidator.clean(merged);
+            resumeAiCacheService.write("resume-regenerate", cacheHash, cleaned);
+            return cleaned;
+        } catch (Exception exception) {
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "RESUME_REGENERATION_FAILED", "Failed to regenerate selected sections");
+        }
+    }
+
+    public ResumeScoreDto scoreResume(ResumeParseResponseDto resume) {
+        return resumeScoringService.score(resumeValidator.clean(resume));
     }
 
     private String normalizeFileType(String fileType, String fileName) {
@@ -128,5 +190,26 @@ public class ResumeParseService {
         }
 
         return "";
+    }
+
+    private void validateMagicBytes(byte[] fileBytes, String normalizedType) {
+        if ("pdf".equals(normalizedType)) {
+            if (fileBytes.length < 4 || fileBytes[0] != 0x25 || fileBytes[1] != 0x50 || fileBytes[2] != 0x44 || fileBytes[3] != 0x46) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PDF", "Uploaded file does not appear to be a valid PDF");
+            }
+        }
+        if ("docx".equals(normalizedType)) {
+            if (fileBytes.length < 4 || fileBytes[0] != 0x50 || fileBytes[1] != 0x4B) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_DOCX", "Uploaded file does not appear to be a valid DOCX");
+            }
+        }
+    }
+
+    private String firstNonBlank(String first, String second) {
+        return first != null && !first.isBlank() ? first : second;
+    }
+
+    private boolean isJsonObject(String value) {
+        return value != null && value.trim().startsWith("{") && value.trim().endsWith("}");
     }
 }

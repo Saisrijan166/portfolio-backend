@@ -36,6 +36,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final TenantFilter tenantFilter;
     private final RequestRateLimitingFilter requestRateLimitingFilter;
+    private final AiEndpointRateLimitingFilter aiEndpointRateLimitingFilter;
     private final RequestLoggingFilter requestLoggingFilter;
     private final JsonAuthenticationEntryPoint jsonAuthenticationEntryPoint;
     private final JsonAccessDeniedHandler jsonAccessDeniedHandler;
@@ -88,6 +89,7 @@ public class SecurityConfig {
                 .addFilterBefore(requestRateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(tenantFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(aiEndpointRateLimitingFilter, JwtAuthenticationFilter.class)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint(jsonAuthenticationEntryPoint)
                         .accessDeniedHandler(jsonAccessDeniedHandler)

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
 /**
@@ -36,7 +37,7 @@ public class ResumeTextExtractor {
             return switch (fileType.toLowerCase()) {
                 case "pdf" -> extractFromPdf(fileBytes);
                 case "docx" -> extractFromDocx(fileBytes);
-                case "txt" -> new String(fileBytes);
+                case "txt" -> new String(fileBytes, StandardCharsets.UTF_8);
                 default -> {
                     log.warn("Unsupported file type for text extraction: {}", fileType);
                     yield "";
