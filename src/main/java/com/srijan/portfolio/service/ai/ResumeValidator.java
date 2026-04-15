@@ -29,10 +29,10 @@ public class ResumeValidator {
                 .education(resume.getEducation() == null ? new ArrayList<>() : new ArrayList<>(resume.getEducation()))
                 .projects(resume.getProjects() == null ? new ArrayList<>() : new ArrayList<>(resume.getProjects()))
                 .certificationAchievements(resume.getCertificationAchievements() == null ? new ArrayList<>() : new ArrayList<>(resume.getCertificationAchievements()))
-                .linkedinUrl(cleanString(resume.getLinkedinUrl()))
-                .githubUrl(cleanString(resume.getGithubUrl()))
-                .websiteUrl(cleanString(resume.getWebsiteUrl()))
-                .otherLinks(resume.getOtherLinks() == null ? new ArrayList<>() : new ArrayList<>(resume.getOtherLinks()))
+                .linkedinUrl(cleanUrl(resume.getLinkedinUrl()))
+                .githubUrl(cleanUrl(resume.getGithubUrl()))
+                .websiteUrl(cleanUrl(resume.getWebsiteUrl()))
+                .otherLinks(cleanParsedLinks(resume.getOtherLinks()))
                 .principles(resume.getPrinciples() == null ? new ArrayList<>() : new ArrayList<>(resume.getPrinciples()))
                 .provider(cleanString(resume.getProvider()))
                 .build();
@@ -77,7 +77,27 @@ public class ResumeValidator {
                 .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
     }
 
+    private String cleanUrl(String url) {
+        String cleaned = cleanString(url);
+        if (cleaned != null && !cleaned.toLowerCase().startsWith("http://") && !cleaned.toLowerCase().startsWith("https://") && !cleaned.toLowerCase().startsWith("mailto:")) {
+            return "https://" + cleaned;
+        }
+        return cleaned;
+    }
+
+    private List<ResumeParseResponseDto.ParsedLink> cleanParsedLinks(List<ResumeParseResponseDto.ParsedLink> links) {
+        if (links == null) {
+            return new ArrayList<>();
+        }
+        return links.stream()
+                .filter(link -> link != null && hasText(link.getUrl()))
+                .peek(link -> link.setUrl(cleanUrl(link.getUrl())))
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+    }
+
     private boolean hasText(String value) {
-        return value != null && !value.trim().isBlank();
+        if (value == null) return false;
+        String trimmed = value.trim();
+        return !trimmed.isBlank() && !"null".equalsIgnoreCase(trimmed);
     }
 }

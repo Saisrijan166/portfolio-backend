@@ -58,7 +58,9 @@ public class SectionSummarizeService {
                 buildUserPrompt(sectionType, sanitizedContent)
         );
         String cleanedSummary = sanitizeSummary(summary);
-        resumeAiCacheService.write(CACHE_TYPE, cacheHash, cleanedSummary);
+        if (!cleanedSummary.isBlank()) {
+            resumeAiCacheService.write(CACHE_TYPE, cacheHash, cleanedSummary);
+        }
         return cleanedSummary;
     }
 

@@ -80,7 +80,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleUnexpected(Exception ex) {
         log.error("Unhandled exception", ex);
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "DEBUG: " + ex.getMessage() + " :: " + ex.getClass().getName(), true);
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "An unexpected error occurred. Please try again later.", true);
     }
 
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(HttpStatus status, String code, String message, boolean logAsError) {

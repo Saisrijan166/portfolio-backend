@@ -29,7 +29,6 @@ public class SectionSummarizeController {
 
     private final SectionSummarizeService sectionSummarizeService;
 
-    @Transactional
     @PostMapping(value = "/api/ai/summarize-section", produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<StreamingResponseBody> summarizeSection(@Valid @RequestBody SectionSummarizeRequestDto request) {
         boolean force = request.forceRefresh() != null && request.forceRefresh();

@@ -48,6 +48,7 @@ public class ResumeParseController {
     public ResponseEntity<ApiResponse<ResumeJobResponseDto>> createParseJob(
             Authentication auth,
             @Valid @RequestBody ResumeParseRequestDto request) {
+        requireAuthenticatedUsername(auth);
         return ApiResponses.ok(
                 resumeJobService.createJob(auth.getName(), request),
                 "Resume parsing job created"
@@ -58,6 +59,7 @@ public class ResumeParseController {
     public ResponseEntity<ApiResponse<ResumeJobResponseDto>> getResumeJob(
             Authentication auth,
             @PathVariable Long id) {
+        requireAuthenticatedUsername(auth);
         return ApiResponses.ok(
                 resumeJobService.getJob(auth.getName(), id),
                 "Resume job fetched successfully"
@@ -90,6 +92,7 @@ public class ResumeParseController {
     public ResponseEntity<ApiResponse<ResumeAiBulkMutationResponseDto>> bulkDelete(
             Authentication auth,
             @Valid @RequestBody ResumeAiBulkDeleteRequestDto request) {
+        requireAuthenticatedUsername(auth);
         return ApiResponses.ok(
                 portfolioService.bulkDeleteResumeAiSections(auth.getName(), request.getSections()),
                 "Resume AI bulk delete completed"
@@ -100,6 +103,7 @@ public class ResumeParseController {
     public ResponseEntity<ApiResponse<ResumeAiBulkMutationResponseDto>> bulkInsert(
             Authentication auth,
             @Valid @RequestBody ResumeAiBulkInsertRequestDto request) {
+        requireAuthenticatedUsername(auth);
         return ApiResponses.ok(
                 portfolioService.bulkInsertResumeAiSections(auth.getName(), request),
                 "Resume AI bulk insert completed"
@@ -110,6 +114,7 @@ public class ResumeParseController {
     public ResponseEntity<ApiResponse<ResumeAiBulkMutationResponseDto>> bulkReplace(
             Authentication auth,
             @Valid @RequestBody ResumeAiBulkInsertRequestDto request) {
+        requireAuthenticatedUsername(auth);
         return ApiResponses.ok(
                 portfolioService.bulkReplaceResumeAiSections(auth.getName(), request),
                 "Resume AI bulk replace completed"

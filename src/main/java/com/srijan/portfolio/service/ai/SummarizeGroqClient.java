@@ -47,7 +47,7 @@ public class SummarizeGroqClient {
             try (Response response = httpClient.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
                     log.error("Groq API error for summarize: HTTP {}", response.code());
-                    throw new RuntimeException("Groq API error: HTTP " + response.code());
+                    throw new RuntimeException("Groq API error: HTTP " + response.code() + " body: " + (response.body() != null ? response.body().string() : ""));
                 }
                 ResponseBody body = response.body();
                 if (body == null) {
@@ -60,6 +60,8 @@ public class SummarizeGroqClient {
                 }
                 return stripMarkdownCodeFence(text);
             }
+        } catch (RuntimeException re) {
+            throw re;
         } catch (Exception exception) {
             log.error("Failed to generate summary with Groq: {}", exception.getMessage());
             throw new RuntimeException("Summarization failed.", exception);

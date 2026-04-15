@@ -87,7 +87,8 @@ public class AiEndpointRateLimitingFilter extends OncePerRequestFilter {
     private String resolveClientIp(HttpServletRequest request) {
         String forwardedFor = trustProxyHeaders ? request.getHeader("X-Forwarded-For") : null;
         if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
+            String[] ips = forwardedFor.split(",");
+            return ips[ips.length - 1].trim();
         }
         return request.getRemoteAddr();
     }

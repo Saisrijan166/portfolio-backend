@@ -24,10 +24,11 @@ public class ResumeJobAsyncProcessor {
 
     @Async("resumeTaskExecutor")
     public void processJobAsync(Long jobId, ResumeParseRequestDto request) {
-        ResumeJob job = resumeJobRepository.findById(jobId)
-                .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, "RESUME_JOB_NOT_FOUND", "Resume job not found"));
-
+        ResumeJob job = null;
         try {
+            job = resumeJobRepository.findById(jobId)
+                    .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, "RESUME_JOB_NOT_FOUND", "Resume job not found"));
+
             job.setStatus("PROCESSING");
             resumeJobRepository.save(job);
 
@@ -45,9 +46,11 @@ public class ResumeJobAsyncProcessor {
             resumeJobRepository.save(job);
         } catch (Exception exception) {
             log.error("Resume Job {} failed with exception", jobId, exception);
-            job.setStatus("FAILED");
-            job.setError(sanitizeFailureMessage(exception));
-            resumeJobRepository.save(job);
+            if (job != null) {
+                job.setStatus("FAILED");
+                job.setError(sanitizeFailureMessage(exception));
+                resumeJobRepository.save(job);
+            }
         }
     }
 

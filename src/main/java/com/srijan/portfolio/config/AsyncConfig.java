@@ -24,13 +24,15 @@ public class AsyncConfig {
         return executor;
     }
 
-    @Bean(destroyMethod = "shutdown")
+    @Bean(name = "aiOrchestratorExecutor")
     public ExecutorService aiOrchestratorExecutor() {
-        return Executors.newFixedThreadPool(4, runnable -> {
-            Thread thread = new Thread(runnable);
-            thread.setName("ai-orchestrator");
-            thread.setDaemon(true);
-            return thread;
-        });
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setThreadNamePrefix("ai-orchestrator-");
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(4);
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        executor.initialize();
+        return executor.getThreadPoolExecutor();
     }
 }

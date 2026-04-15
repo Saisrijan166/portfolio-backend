@@ -16,11 +16,19 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class ResumeAiCacheService {
 
     private final ResumeAiCacheRepository resumeAiCacheRepository;
     private final ObjectMapper objectMapper;
+    private final ObjectMapper canonicalMapper;
+
+    public ResumeAiCacheService(ResumeAiCacheRepository resumeAiCacheRepository, ObjectMapper objectMapper) {
+        this.resumeAiCacheRepository = resumeAiCacheRepository;
+        this.objectMapper = objectMapper;
+        this.canonicalMapper = objectMapper.copy()
+                .configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true)
+                .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+    }
 
     public String sha256(String input) {
         try {
@@ -52,7 +60,7 @@ public class ResumeAiCacheService {
                             .cacheKey(cacheKey)
                             .cacheType(cacheType)
                             .build());
-            entry.setResponseJson(canonicalMapper().writeValueAsString(payload));
+            entry.setResponseJson(canonicalMapper.writeValueAsString(payload));
             resumeAiCacheRepository.save(entry);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Failed to serialize resume AI cache payload", exception);
@@ -61,7 +69,7 @@ public class ResumeAiCacheService {
 
     public String hashObject(Object value) {
         try {
-            return sha256(canonicalMapper().writeValueAsString(value));
+            return sha256(canonicalMapper.writeValueAsString(value));
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Failed to hash cache payload", exception);
         }
@@ -80,9 +88,4 @@ public class ResumeAiCacheService {
         }
     }
 
-    private ObjectMapper canonicalMapper() {
-        return objectMapper.copy()
-                .configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true)
-                .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-    }
 }
