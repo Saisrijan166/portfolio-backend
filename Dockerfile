@@ -26,4 +26,9 @@ EXPOSE 8080
 # Copy the built jar to the runtime image
 COPY --from=build /app/target/*.jar app.jar
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", \
+    "-XX:MaxRAMPercentage=75.0", \
+    "-XX:+UseG1GC", \
+    "-XX:+UseStringDeduplication", \
+    "-Dspring.profiles.active=prod", \
+    "-jar", "app.jar"]
