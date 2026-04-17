@@ -4,6 +4,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.util.HtmlUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Safelist;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -20,26 +22,38 @@ public class EmailTemplateService {
     public String render(String templateName, Map<String, String> variables, TenantEmailContext tenantContext) {
         Map<String, String> safeVariables = new HashMap<>();
         if (variables != null) {
-            variables.forEach((key, value) -> safeVariables.put(
-                    key,
-                    isRawToken(key) ? (value == null ? "" : value) : HtmlUtils.htmlEscape(value == null ? "" : value)
-            ));
+            variables.forEach((key, value) -> {
+                String safeValue;
+                if (value == null) {
+                    safeValue = "";
+                } else if (isRawToken(key)) {
+                    if (key.endsWith("_HTML")) {
+                        safeValue = Jsoup.clean(value, Safelist.relaxed());
+                    } else {
+                        safeValue = value;
+                    }
+                } else {
+                    safeValue = HtmlUtils.htmlEscape(value);
+                }
+                safeVariables.put(key, safeValue);
+            });
         }
 
         safeVariables.put("APP_NAME", escape(tenantContext.appName()));
-        safeVariables.put("APP_URL", escape(tenantContext.appUrl()));
+        String appUrl = validateUrl(tenantContext.appUrl(), "APP_URL");
+        safeVariables.put("APP_URL", escape(appUrl));
         
         String tKey = tenantContext.tenantKey();
         if (tKey != null && !tKey.isBlank()) {
-            safeVariables.put("DASHBOARD_URL", escape(tenantContext.appUrl() + "/dashboard/" + tKey));
-            safeVariables.put("PORTFOLIO_URL", escape(tenantContext.appUrl() + "/" + tKey));
+            safeVariables.put("DASHBOARD_URL", escape(validateUrl(appUrl + "/dashboard/" + tKey, "DASHBOARD_URL")));
+            safeVariables.put("PORTFOLIO_URL", escape(validateUrl(appUrl + "/" + tKey, "PORTFOLIO_URL")));
         } else {
-            safeVariables.put("DASHBOARD_URL", escape(tenantContext.appUrl() + "/login"));
-            safeVariables.put("PORTFOLIO_URL", escape(tenantContext.appUrl()));
+            safeVariables.put("DASHBOARD_URL", escape(validateUrl(appUrl + "/login", "DASHBOARD_URL")));
+            safeVariables.put("PORTFOLIO_URL", escape(appUrl));
         }
         safeVariables.put("SUPPORT_EMAIL", escape(tenantContext.supportEmail()));
-        safeVariables.put("PRIMARY_COLOR", escape(tenantContext.primaryColor()));
-        safeVariables.put("ACCENT_COLOR", escape(tenantContext.accentColor()));
+        safeVariables.put("PRIMARY_COLOR", escape(validateColor(tenantContext.primaryColor(), "PRIMARY_COLOR")));
+        safeVariables.put("ACCENT_COLOR", escape(validateColor(tenantContext.accentColor(), "ACCENT_COLOR")));
         safeVariables.put("CURRENT_YEAR", String.valueOf(Year.now().getValue()));
         safeVariables.put("LOGO_SECTION", buildLogoSection(tenantContext));
         safeVariables.put("PREHEADER", escape(variables != null ? variables.getOrDefault("PREHEADER", "") : ""));
@@ -106,7 +120,7 @@ public class EmailTemplateService {
                 <div style="margin-bottom: 16px;">
                   <img src="%s" alt="%s logo" style="max-height: 40px; width: auto; display: inline-block;" />
                 </div>
-                """.formatted(escape(tenantContext.logoUrl()), escape(tenantContext.appName()));
+                """.formatted(escape(validateUrl(tenantContext.logoUrl(), "EMAIL_LOGO_URL")), escape(tenantContext.appName()));
     }
 
     private String replaceTokens(String template, Map<String, String> variables) {
@@ -132,5 +146,19 @@ public class EmailTemplateService {
 
     private boolean isRawToken(String key) {
         return key != null && (key.endsWith("_HTML") || key.endsWith("_ROWS") || key.endsWith("_SECTION"));
+    }
+
+    private String validateUrl(String url, String fieldName) {
+        if (url != null && !url.isBlank() && !url.startsWith("https://") && !url.startsWith("http://")) {
+            throw new IllegalArgumentException("Invalid URL protocol for " + fieldName);
+        }
+        return url;
+    }
+
+    private String validateColor(String color, String fieldName) {
+        if (color != null && !color.isBlank() && !color.matches("^#[0-9a-fA-F]{3,6}$")) {
+            throw new IllegalArgumentException("Invalid color format for " + fieldName);
+        }
+        return color;
     }
 }

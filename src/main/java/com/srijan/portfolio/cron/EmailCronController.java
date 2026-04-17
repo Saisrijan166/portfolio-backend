@@ -19,15 +19,8 @@ public class EmailCronController {
 
     private final WeeklyEmailService weeklyEmailService;
 
-    @Value("${cron.api.key}")
-    private String configuredApiKey;
-
     @PostMapping("/weekly-email")
-    public ResponseEntity<?> triggerWeeklyEmail(@RequestHeader(value = "X-API-Key", required = false) String apiKey) {
-        if (apiKey == null || configuredApiKey == null || !MessageDigest.isEqual(apiKey.getBytes(), configuredApiKey.getBytes())) {
-            log.warn("Unauthorized invocation of weekly email cron job");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Unauthorized access to cron endpoint"));
-        }
+    public ResponseEntity<?> triggerWeeklyEmail() {
 
         String jobId = "weekly-email-" + java.time.LocalDate.now().toString() + "-" + UUID.randomUUID().toString().substring(0, 8);
         log.info("Triggered weekly email cron job. Job ID: {}", jobId);

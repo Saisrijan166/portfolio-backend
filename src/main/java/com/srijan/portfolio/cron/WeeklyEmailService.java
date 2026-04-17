@@ -37,27 +37,27 @@ public class WeeklyEmailService {
     private static final List<EmailVariant> VARIANTS = List.of(
             new EmailVariant(
                     "💡 Quick check… when was your last portfolio update?",
-                    "\n\nIt’s been a little quiet on your portfolio lately.\nNo updates. No changes. Just sitting there.\nMeanwhile, new ideas, projects, and skills are probably piling up on your side.\nMaybe it’s time to bring it back to life.",
+                    "\nIt’s been a little quiet on your portfolio lately.\nNo updates. No changes. Just sitting there.\nMeanwhile, new ideas, projects, and skills are probably piling up on your side.\nMaybe it’s time to bring it back to life.",
                     "Open your portfolio"
             ),
             new EmailVariant(
                     "It’s waiting for you 👀",
-                    "\n\nYour portfolio misses you.\nIt’s been waiting… probably wondering when you’ll come back and add something new.\nEven a small update makes a difference.",
+                    "\nYour portfolio misses you.\nIt’s been waiting… probably wondering when you’ll come back and add something new.\nEven a small update makes a difference.",
                     "Give it a quick update"
             ),
             new EmailVariant(
                     "This is not what you want 😄",
-                    "\n\nIf someone opens your portfolio today…\nthey’ll see exactly what they saw last week.\nNo new projects. No updates.\nThat might not be the impression you want to leave.",
+                    "\nIf someone opens your portfolio today…\nthey’ll see exactly what they saw last week.\nNo new projects. No updates.\nThat might not be the impression you want to leave.",
                     "Make a quick update"
             ),
             new EmailVariant(
                     "🧠 One small update can change everything",
-                    "\n\nMost people don’t realize this—\nOne small update to a portfolio can completely change how it’s perceived.\nA new project. A better description. A small tweak.\nYou don’t need a full overhaul.\nJust one step.",
+                    "\nMost people don’t realize this—\nOne small update to a portfolio can completely change how it’s perceived.\nA new project. A better description. A small tweak.\nYou don’t need a full overhaul.\nJust one step.",
                     "Update something today"
             ),
             new EmailVariant(
                     "⏳ Time moved forward. Did you?",
-                    "\n\nAnother week passed.\nYour skills probably improved.\nYour ideas probably evolved.\nBut your portfolio?\nStill the same.",
+                    "\nAnother week passed.\nYour skills probably improved.\nYour ideas probably evolved.\nBut your portfolio?\nStill the same.",
                     "Sync it with your current self"
             )
     );
@@ -92,12 +92,13 @@ public class WeeklyEmailService {
                 try {
                     Map<String, String> variables = new HashMap<>();
                     variables.put("SUBJECT", selectedVariant.subject());
-                    variables.put("GREETING", "Hey" + (user.getUsername() != null ? " " + user.getUsername() : "") + ",");
+                    String escapedUsername = user.getUsername() != null ? " " + HtmlUtils.htmlEscape(user.getUsername()) : "";
+                    variables.put("GREETING", "Hey" + escapedUsername + ",");
                     // Security: Standardize newline to br and escape text content before adding HTML
                     String sanitizedBody = HtmlUtils.htmlEscape(selectedVariant.body()).replace("\n", "<br/>");
                     variables.put("MESSAGE_HTML", sanitizedBody);
                     variables.put("CTA_TEXT", selectedVariant.ctaText());
-                    variables.put("PREHEADER", "Your weekly portfolio pulse.");
+                    variables.put("PREHEADER", "Your portfolio pulse.");
 
                     emailService.sendTemplatedEmail(
                             user.getEmail(),
@@ -108,7 +109,7 @@ public class WeeklyEmailService {
                     );
                     log.debug("Sent weekly email to: {}", maskedEmail);
                 } catch (Exception e) {
-                    log.error("Failed to send weekly email to: {}. Error: {}", maskedEmail, e.getMessage());
+                    log.error("Failed to send weekly email to: {}", maskedEmail, e);
                 }
             }
 
