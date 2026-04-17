@@ -35,7 +35,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         if (path != null && path.startsWith("/api/cron/")) {
             String apiKey = request.getHeader("X-API-Key");
             
-            if (apiKey == null || configuredApiKey == null || !MessageDigest.isEqual(apiKey.getBytes(), configuredApiKey.getBytes())) {
+            if (apiKey == null || configuredApiKey == null || !MessageDigest.isEqual(apiKey.getBytes(StandardCharsets.UTF_8), configuredApiKey.getBytes(StandardCharsets.UTF_8))) {
                 log.warn("Unauthorized invocation of cron endpoint: {}", path);
                 response.setStatus(HttpStatus.UNAUTHORIZED.value());
                 response.setContentType("application/json");

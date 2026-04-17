@@ -156,7 +156,7 @@ public class EmailTemplateService {
     }
 
     private String validateColor(String color, String fieldName) {
-        if (color != null && !color.isBlank() && !color.matches("^#[0-9a-fA-F]{3,6}$")) {
+        if (color != null && !color.isBlank() && !color.matches("^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")) {
             throw new IllegalArgumentException("Invalid color format for " + fieldName);
         }
         return color;
