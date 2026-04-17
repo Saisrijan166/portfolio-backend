@@ -20,11 +20,11 @@ public class ResumePromptFactory {
         return """
                 Parse the provided resume into JSON only.
                 Return ONLY valid JSON. No markdown. No code fences. No explanation.
-                DO NOT hallucinate missing facts.
+                Grounded in the provided resume, reasonably infer and generate missing fields (like descriptions, roles, achievements, etc.) accurately from the available context to ensure professional completeness.
                 DO NOT add extra fields.
-                If a value is missing, return null for scalars and [] for arrays.
+                If a value is missing and cannot be reasonably inferred, return null for scalars and [] for arrays.
                 Arrays must never be null.
-                Note for skills: For 'metaSkill' (identify from skills), set it to true for soft skills, interpersonal skills, meta skills likewise. Otherwise false. If true, provide context related to the skill in 'metaDescription'.
+                Note for skills: For 'metaSkill' (identify from skills), set it to true (boolean) for soft skills, interpersonal skills, meta skills likewise. Otherwise false. If true, provide context for the skill in 'metaDescription' in exactly 1 sentence.
                 Use this exact schema:
                 {
                   "name": "",
@@ -137,13 +137,14 @@ public class ResumePromptFactory {
                 Return ONLY valid JSON.
                 DO NOT add extra fields.
                 DO NOT overwrite sections that were not requested.
-                Keep facts grounded in the provided resume data only.
+                Grounded in the provided resume data, reasonably infer and generate missing fields accurately from context.
                 Requested sections: %s
                 Existing parsed resume JSON:
                 %s
                 Return a partial JSON object containing only these top-level keys when requested:
                 skills, experience, education, projects, certificationAchievements, summary, about, principles, headline.
                 Arrays must never be null.
+                Note for skills: If improving 'skills', for 'metaSkill' (identify from skills), set it to true (boolean) for soft skills, interpersonal skills, meta skills likewise. Otherwise false. If true, provide context for the skill in 'metaDescription' in exactly 1 sentence.
                 """.formatted(String.join(", ", sanitizedSections), writeJson(existingResume));
     }
 
