@@ -71,6 +71,7 @@ public class SecurityConfig {
                                 "/api/public/portfolio/*/feedback/platform",
                                 "/api/public/portfolio/*/contact/message"
                         ).permitAll()
+                        .requestMatchers("/api/cron/weekly-email").permitAll()
                         .requestMatchers("/api/admin/profile/**", "/api/admin/about/**").authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/me/**").hasAnyRole("USER", "ADMIN")
@@ -106,7 +107,7 @@ public class SecurityConfig {
         config.setAllowCredentials(true);
         config.setAllowedOriginPatterns(resolveAllowedOriginPatterns());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "X-Visitor-Token"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "X-Visitor-Token", "X-API-Key"));
         config.setExposedHeaders(List.of("Authorization"));
         config.setMaxAge(3600L);
 

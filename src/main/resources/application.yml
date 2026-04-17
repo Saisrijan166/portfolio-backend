@@ -102,3 +102,12 @@ management:
   endpoint:
     health:
       show-details: never
+
+cron:
+  api:
+    key: ${CRON_API_KEY}
+
+email:
+  batch:
+    size: ${EMAIL_BATCH_SIZE:50}
+    delay: ${EMAIL_BATCH_DELAY:2000}
