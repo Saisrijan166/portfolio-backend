@@ -56,6 +56,7 @@ public class EmailTemplateService {
         safeVariables.put("ACCENT_COLOR", escape(validateColor(tenantContext.accentColor(), "ACCENT_COLOR")));
         safeVariables.put("CURRENT_YEAR", String.valueOf(Year.now().getValue()));
         safeVariables.put("LOGO_SECTION", buildLogoSection(tenantContext));
+        safeVariables.put("ASSET_URL", escape(tenantContext.assetBaseUrl()));
         safeVariables.put("PREHEADER", escape(variables != null ? variables.getOrDefault("PREHEADER", "") : ""));
 
         String content = replaceTokens(loadTemplate(templateName + ".html"), safeVariables);
@@ -117,10 +118,10 @@ public class EmailTemplateService {
             return "";
         }
         return """
-                <div style="margin-bottom: 16px;">
-                  <img src="%s" alt="%s logo" style="max-height: 40px; width: auto; display: inline-block;" />
+                <div style="margin-bottom: 6px;">
+                  <img src="%s" alt="%s logo" style="max-height: 40px; width: auto; display: inline-block; border-radius: 100%%;" />
                 </div>
-                """.formatted(escape(validateUrl(tenantContext.logoUrl(), "EMAIL_LOGO_URL")), escape(tenantContext.appName()));
+                """.formatted(escape(tenantContext.logoUrl()), escape(tenantContext.appName()));
     }
 
     private String replaceTokens(String template, Map<String, String> variables) {

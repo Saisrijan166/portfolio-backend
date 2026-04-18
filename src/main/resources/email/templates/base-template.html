@@ -40,61 +40,76 @@
             </td>
           </tr>
 
-          <div style="margin-top: 18px; text-align: left; background: #ffffff; border-radius: 24px; padding: 28px; box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);">
-          
-            <!-- Section Title -->
-            <div style="font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 10px;">
-              Quick Access to your account 
-            </div>
-          
-            <!-- Button Container -->
-            <table role="presentation" cellspacing="0" cellpadding="0">
-              <tr>
-          
-                <!-- Dashboard Button -->
-                <td style="padding-right: 8px;">
-                  <a href="{{DASHBOARD_URL}}"
-                    style="display: inline-block; padding: 10px 16px; font-size: 13px; font-weight: 600;
-                    color: #ffffff; background: {{PRIMARY_COLOR}}; border-radius: 10px;
-                    text-decoration: none;">
-                    Open Dashboard
-                  </a>
-                </td>
-          
-                <!-- Portfolio Button -->
-                <td>
-                  <a href="{{PORTFOLIO_URL}}"
-                    style="display: inline-block; padding: 10px 16px; font-size: 13px; font-weight: 600;
-                    color: {{PRIMARY_COLOR}}; background: #eef2ff; border-radius: 10px;
-                    text-decoration: none;">
-                    View Portfolio
-                  </a>
-                </td>
-          
-              </tr>
-            </table>
-          
-            <!-- Fallback Links (VERY IMPORTANT for email clients) -->
-            <div style="margin-top: 12px; font-size: 11px; color: #9ca3af; line-height: 1.6;">
-              <div style="margin-bottom: 10px; margin-left: 4px;">
-                If above buttons are not working, please use these links:
+          <tr>
+            <td style="padding-top: 18px;">
+              <div
+                style="text-align: left; background: #ffffff; border-radius: 24px; padding: 28px; box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);">
+
+                <!-- Section Title -->
+                <div style="font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 10px;">
+                  Quick Access to your account
+                </div>
+
+                <!-- Button Container -->
+                <table role="presentation" cellspacing="0" cellpadding="0">
+                  <tr>
+
+                    <!-- Dashboard Button -->
+                    <td style="padding-right: 8px;">
+                      <a href="{{DASHBOARD_URL}}" style="display: inline-block; padding: 10px 16px; font-size: 13px; font-weight: 600;
+                        color: #ffffff; background: {{PRIMARY_COLOR}}; border-radius: 10px;
+                        text-decoration: none;">
+                        Open Dashboard
+                      </a>
+                    </td>
+
+                    <!-- Portfolio Button -->
+                    <td>
+                      <a href="{{PORTFOLIO_URL}}" style="display: inline-block; padding: 10px 16px; font-size: 13px; font-weight: 600;
+                        color: {{PRIMARY_COLOR}}; background: #eef2ff; border-radius: 10px;
+                        text-decoration: none;">
+                        View Portfolio
+                      </a>
+                    </td>
+
+                  </tr>
+                </table>
+
+                <!-- Fallback Links (VERY IMPORTANT for email clients) -->
+                <div style="margin-top: 12px; font-size: 11px; color: #9ca3af; line-height: 1.6;">
+                  <div style="margin-bottom: 10px; margin-left: 4px;">
+                    If above buttons are not working, please use these links:
+                  </div>
+                  <div style="display: flex; gap: 10px; margin-left: 4px;">
+                    <strong>Dashboard URL ( where you manage your portfolio ):</strong><br />
+                    <a href="{{DASHBOARD_URL}}"
+                      style="color: {{PRIMARY_COLOR}}; word-break: break-all; margin-left: 10px;">
+                      {{DASHBOARD_URL}}
+                    </a>
+                  </div>
+
+                  <div style="margin-top: 6px; display: flex; gap: 10px; margin-left: 4px;">
+                    <strong>Portfolio URL ( this is your public portfolio ):</strong><br />
+                    <a href="{{PORTFOLIO_URL}}"
+                      style="color: {{PRIMARY_COLOR}}; word-break: break-all; margin-left: 10px;">
+                      {{PORTFOLIO_URL}}
+                    </a>
+                  </div>
+                </div>
+
               </div>
-              <div style="display: flex; gap: 10px; margin-left: 4px;">
-                <strong>Dashboard URL ( where you manage your portfolio ):</strong><br />
-                <a href="{{DASHBOARD_URL}}" style="color: {{PRIMARY_COLOR}}; word-break: break-all; margin-left: 10px;">
-                  {{DASHBOARD_URL}}
-                </a>
-              </div>
-          
-              <div style="margin-top: 6px; display: flex; gap: 10px; margin-left: 4px;">
-                <strong>Portfolio URL ( this is your public portfolio ):</strong><br />
-                <a href="{{PORTFOLIO_URL}}" style="color: {{PRIMARY_COLOR}}; word-break: break-all; margin-left: 10px;">
-                  {{PORTFOLIO_URL}}
-                </a>
-              </div>
-            </div>
-          
-          </div>
+            </td>
+          </tr>
+
+          <!-- System Logo (SVG) -->
+          <tr>
+            <td align="center" style="padding: 0px 0 10px;">
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <img src="{{ASSET_URL}}/logos/portfolioos.svg" alt="PortfolioOS"
+                  style="width: 640px; height: full; display: block; opacity: 0.85;" />
+              </table>
+            </td>
+          </tr>
           <tr>
             <td style="padding: 18px 8px 0; text-align: center;">
               <div style="font-size: 12px; line-height: 1.7; color: #6b7280;">

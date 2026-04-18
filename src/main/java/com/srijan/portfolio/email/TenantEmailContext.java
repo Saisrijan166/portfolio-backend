@@ -11,6 +11,7 @@ public record TenantEmailContext(
         String accentColor,
         String supportEmail,
         String appUrl,
+        String assetBaseUrl,
         String fromName,
         String fromEmail
 ) {

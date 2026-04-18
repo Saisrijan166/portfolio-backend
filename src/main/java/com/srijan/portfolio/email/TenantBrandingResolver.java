@@ -36,10 +36,24 @@ public class TenantBrandingResolver {
                 "no-reply@srijanos.com"
         );
 
+        String appUrl = firstNonBlank(
+                getTenantOverride(sanitizedTenant, "APP_URL"),
+                EnvironmentUtils.get("APP_URL"),
+                EnvironmentUtils.get("AUTH_OAUTH_FRONTEND_SUCCESS_URL"),
+                "http://localhost:3000"
+        );
+
+        String assetBaseUrl = firstNonBlank(
+                EnvironmentUtils.get("NEXT_PUBLIC_ASSET_BASE_URL"),
+                appUrl
+        );
+
         return TenantEmailContext.builder()
                 .tenantKey(sanitizedTenant)
                 .appName(appName)
-                .logoUrl(getTenantOverride(sanitizedTenant, "EMAIL_LOGO_URL"))
+                .logoUrl(firstNonBlank(
+                        assetBaseUrl + "/logos/logo_portfolioos.png"
+                ))
                 .primaryColor(firstNonBlank(
                         getTenantOverride(sanitizedTenant, "EMAIL_PRIMARY_COLOR"),
                         EnvironmentUtils.get("EMAIL_PRIMARY_COLOR"),
@@ -55,12 +69,8 @@ public class TenantBrandingResolver {
                         EnvironmentUtils.get("SUPPORT_EMAIL"),
                         fromEmail
                 ))
-                .appUrl(firstNonBlank(
-                        getTenantOverride(sanitizedTenant, "APP_URL"),
-                        EnvironmentUtils.get("APP_URL"),
-                        EnvironmentUtils.get("AUTH_OAUTH_FRONTEND_SUCCESS_URL"),
-                        "http://localhost:3000"
-                ))
+                .appUrl(appUrl)
+                .assetBaseUrl(assetBaseUrl)
                 .fromName(appName)
                 .fromEmail(fromEmail)
                 .build();
