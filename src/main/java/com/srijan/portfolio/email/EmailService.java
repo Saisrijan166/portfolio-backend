@@ -109,7 +109,7 @@ public class EmailService {
     ) {
         sendTemplatedEmail(
                 to,
-                "New contact message: " + safe(subjectLine) + " - PortfolioOS",
+                "New contact message: " + safe(subjectLine),
                 "contact-message-email",
                 Map.of(
                         "PREHEADER", "New contact message for @" + safe(portfolioUsername),
@@ -133,7 +133,7 @@ public class EmailService {
         details.put("Time", DATE_TIME_FORMATTER.format(java.time.Instant.now()));
         sendNotificationEmail(
                 to,
-                "New sign-in to your account - PortfolioOS",
+                "New sign-in to your account",
                 "New sign-in detected",
                 "We noticed a successful sign-in to your account. If this was you, no action is needed.",
                 details,
@@ -148,7 +148,7 @@ public class EmailService {
         details.put("Change type", fromResetFlow ? "Password reset" : "Password changed");
         sendNotificationEmail(
                 to,
-                fromResetFlow ? "Password has been reset - PortfolioOS" : "Password has been changed - PortfolioOS",
+                fromResetFlow ? "Password has been reset" : "Password has been changed",
                 fromResetFlow ? "Password reset successful" : "Password changed successfully",
                 fromResetFlow
                         ? "Your account password was reset successfully. You can now sign in with your new password."
@@ -166,7 +166,7 @@ public class EmailService {
         details.put("Updated at", DATE_TIME_FORMATTER.format(java.time.Instant.now()));
         sendNotificationEmail(
                 to,
-                "Username has been updated - PortfolioOS",
+                "Username has been updated",
                 "Username updated",
                 "Your sign-in username and public portfolio URL were updated successfully.",
                 details,

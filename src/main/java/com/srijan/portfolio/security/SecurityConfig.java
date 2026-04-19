@@ -47,6 +47,7 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oauth2AuthenticationSuccessHandler;
     private final OAuth2AuthenticationFailureHandler oauth2AuthenticationFailureHandler;
     private final ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
+    private final SecurityHeaderFilter securityHeaderFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -90,6 +91,7 @@ public class SecurityConfig {
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(securityHeaderFilter, ApiKeyAuthenticationFilter.class)
                 .addFilterBefore(requestLoggingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(requestRateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(tenantFilter, UsernamePasswordAuthenticationFilter.class)

@@ -55,6 +55,7 @@ mailing:
 server:
   port: 8080
   shutdown: graceful
+  forward-headers-strategy: framework
   tomcat:
     connection-timeout: ${SERVER_CONNECTION_TIMEOUT:20000}
     keep-alive-timeout: ${SERVER_KEEP_ALIVE_TIMEOUT:15000}
@@ -71,7 +72,7 @@ auth:
   refresh-cookie:
     name: ${AUTH_REFRESH_COOKIE_NAME:refresh_token}
     secure: ${AUTH_REFRESH_COOKIE_SECURE:true}
-    same-site: ${AUTH_REFRESH_COOKIE_SAME_SITE:Lax}
+    same-site: ${AUTH_REFRESH_COOKIE_SAME_SITE:None}
     path: ${AUTH_REFRESH_COOKIE_PATH:/}
     max-age-seconds: ${AUTH_REFRESH_COOKIE_MAX_AGE_SECONDS:604800}
   oauth:
@@ -92,7 +93,7 @@ feedback:
     developer-email: ${FEEDBACK_DEVELOPER_EMAIL:dev@yourplatform.com}
 
 security:
-  trust-proxy-headers: ${SECURITY_TRUST_PROXY_HEADERS:false}
+  trust-proxy-headers: ${SECURITY_TRUST_PROXY_HEADERS:true}
 
 management:
   endpoints:

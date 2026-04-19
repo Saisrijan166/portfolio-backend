@@ -169,7 +169,7 @@ public class EmailOtpService {
                         otp,
                         expiryMinutes,
                         "Reset Your Password",
-                        "Password reset code - PortfolioOS",
+                        "Password reset code",
                         "Use the code below to reset your password and continue securely.",
                         tenantContext
                 );
@@ -181,7 +181,7 @@ public class EmailOtpService {
                     otp,
                     expiryMinutes,
                     "Your Login Verification Code",
-                    "Login verification code - PortfolioOS",
+                    "Login verification code",
                     "Use the code below to continue.",
                     tenantContext
             );

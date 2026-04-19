@@ -22,10 +22,18 @@
                 style="background: linear-gradient(135deg, {{PRIMARY_COLOR}}, {{ACCENT_COLOR}}); border-radius: 28px 28px 12px 12px;">
                 <tr>
                   <td style="padding: 28px 28px 22px; text-align: left;">
-                    {{LOGO_SECTION}}
-                    <div style="font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.03em;">
-                      {{APP_NAME}}</div>
-                    <div style="margin-top: 8px; font-size: 13px; line-height: 1.6; color: rgba(255,255,255,0.84);">
+                    <table role="presentation" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="vertical-align: middle; padding-right: 12px;">
+                          {{LOGO_SECTION}}
+                        </td>
+                        <td style="vertical-align: middle;">
+                          <div style="font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: -0.03em;">
+                            {{APP_NAME}}</div>
+                        </td>
+                      </tr>
+                    </table>
+                    <div style="margin-top: 10px; font-size: 15px; line-height: 1.6; color: rgba(255,255,255,0.84);">
                       Secure account notifications and authentication updates.
                     </div>
                   </td>
@@ -46,7 +54,7 @@
                 style="text-align: left; background: #ffffff; border-radius: 24px; padding: 28px; box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);">
 
                 <!-- Section Title -->
-                <div style="font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 10px;">
+                <div style="font-size: 15px; font-weight: 600; color: #6b7280; margin-bottom: 10px;">
                   Quick Access to your account
                 </div>
 
@@ -56,7 +64,7 @@
 
                     <!-- Dashboard Button -->
                     <td style="padding-right: 8px;">
-                      <a href="{{DASHBOARD_URL}}" style="display: inline-block; padding: 10px 16px; font-size: 13px; font-weight: 600;
+                      <a href="{{DASHBOARD_URL}}" style="display: inline-block; padding: 10px 18px; font-size: 15px; font-weight: 600;
                         color: #ffffff; background: {{PRIMARY_COLOR}}; border-radius: 10px;
                         text-decoration: none;">
                         Open Dashboard
@@ -65,7 +73,7 @@
 
                     <!-- Portfolio Button -->
                     <td>
-                      <a href="{{PORTFOLIO_URL}}" style="display: inline-block; padding: 10px 16px; font-size: 13px; font-weight: 600;
+                      <a href="{{PORTFOLIO_URL}}" style="display: inline-block; padding: 10px 18px; font-size: 15px; font-weight: 600;
                         color: {{PRIMARY_COLOR}}; background: #eef2ff; border-radius: 10px;
                         text-decoration: none;">
                         View Portfolio
@@ -76,12 +84,12 @@
                 </table>
 
                 <!-- Fallback Links (VERY IMPORTANT for email clients) -->
-                <div style="margin-top: 12px; font-size: 11px; color: #9ca3af; line-height: 1.6;">
+                <div style="margin-top: 14px; font-size: 13px; color: #9ca3af; line-height: 1.6;">
                   <div style="margin-bottom: 10px; margin-left: 4px;">
                     If above buttons are not working, please use these links:
                   </div>
                   <div style="display: flex; gap: 10px; margin-left: 4px;">
-                    <strong>Dashboard URL ( where you manage your portfolio ):</strong><br />
+                    <strong>Dashboard URL:</strong><br />
                     <a href="{{DASHBOARD_URL}}"
                       style="color: {{PRIMARY_COLOR}}; word-break: break-all; margin-left: 10px;">
                       {{DASHBOARD_URL}}
@@ -89,7 +97,7 @@
                   </div>
 
                   <div style="margin-top: 6px; display: flex; gap: 10px; margin-left: 4px;">
-                    <strong>Portfolio URL ( this is your public portfolio ):</strong><br />
+                    <strong>Portfolio URL:</strong><br />
                     <a href="{{PORTFOLIO_URL}}"
                       style="color: {{PRIMARY_COLOR}}; word-break: break-all; margin-left: 10px;">
                       {{PORTFOLIO_URL}}
@@ -105,21 +113,25 @@
           <tr>
             <td align="center" style="padding: 0px 0 10px;">
               <table role="presentation" cellspacing="0" cellpadding="0">
-                <img src="{{ASSET_URL}}/logos/portfolioos.png" alt="PortfolioOS"
-                  style="width: 620px; height: full; display: block; opacity: 0.85;" />
+                <tr>
+                  <td>
+                    <img src="{{ASSET_URL}}/logos/portfolioos.png" alt="PortfolioOS"
+                      style="width: 620px; height: auto; display: block; opacity: 0.85;" />
+                  </td>
+                </tr>
               </table>
             </td>
           </tr>
           <tr>
             <td style="padding: 18px 8px 0; text-align: center;">
-              <div style="font-size: 12px; line-height: 1.7; color: #6b7280;">
+              <div style="font-size: 14px; line-height: 1.7; color: #6b7280;">
                 Need help? Contact <a href="mailto:{{SUPPORT_EMAIL}}"
                   style="color: {{PRIMARY_COLOR}}; text-decoration: none;">{{SUPPORT_EMAIL}}</a>
               </div>
-              <div style="margin-top: 6px; font-size: 12px; line-height: 1.7; color: #9ca3af;">
+              <div style="margin-top: 6px; font-size: 14px; line-height: 1.7; color: #9ca3af;">
                 Please do not reply directly to this automated email.
               </div>
-              <div style="margin-top: 6px; font-size: 12px; line-height: 1.7; color: #9ca3af;">
+              <div style="margin-top: 6px; font-size: 14px; line-height: 1.7; color: #9ca3af;">
                 &copy; {{CURRENT_YEAR}} {{APP_NAME}}
               </div>
             </td>
