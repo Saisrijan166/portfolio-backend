@@ -1056,6 +1056,7 @@ public class PortfolioService {
         return AppearanceSettingsDto.builder()
                 .theme(sanitize(config.getTheme()))
                 .wallpaper(mapWallpaperSettings(config))
+                .mobileWallpaper(mapMobileWallpaperSettings(config))
                 .build();
     }
 
@@ -1064,6 +1065,24 @@ public class PortfolioService {
         String src = sanitize(config.getWallpaperSrc());
         String id = sanitize(config.getWallpaperId());
         Boolean isLight = config.getWallpaperIsLight();
+
+        if (kind == null && src == null && id == null && isLight == null) {
+            return null;
+        }
+
+        return WallpaperSettingsDto.builder()
+                .kind(kind)
+                .src(src)
+                .id(id)
+                .isLight(isLight)
+                .build();
+    }
+
+    private WallpaperSettingsDto mapMobileWallpaperSettings(AppearanceConfig config) {
+        String kind = sanitize(config.getMobileWallpaperKind());
+        String src = sanitize(config.getMobileWallpaperSrc());
+        String id = sanitize(config.getMobileWallpaperId());
+        Boolean isLight = config.getMobileWallpaperIsLight();
 
         if (kind == null && src == null && id == null && isLight == null) {
             return null;

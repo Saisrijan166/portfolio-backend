@@ -17,4 +17,7 @@ public class AppearanceSettingsDto {
 
     @Valid
     private WallpaperSettingsDto wallpaper;
+
+    @Valid
+    private WallpaperSettingsDto mobileWallpaper;
 }

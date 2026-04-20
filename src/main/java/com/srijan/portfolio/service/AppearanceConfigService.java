@@ -47,6 +47,10 @@ public class AppearanceConfigService {
         config.setWallpaperSrc(sanitize(dto.getWallpaper() != null ? dto.getWallpaper().getSrc() : null));
         config.setWallpaperId(sanitize(dto.getWallpaper() != null ? dto.getWallpaper().getId() : null));
         config.setWallpaperIsLight(dto.getWallpaper() != null ? dto.getWallpaper().getIsLight() : null);
+        config.setMobileWallpaperKind(sanitize(dto.getMobileWallpaper() != null ? dto.getMobileWallpaper().getKind() : null));
+        config.setMobileWallpaperSrc(sanitize(dto.getMobileWallpaper() != null ? dto.getMobileWallpaper().getSrc() : null));
+        config.setMobileWallpaperId(sanitize(dto.getMobileWallpaper() != null ? dto.getMobileWallpaper().getId() : null));
+        config.setMobileWallpaperIsLight(dto.getMobileWallpaper() != null ? dto.getMobileWallpaper().getIsLight() : null);
 
         return map(appearanceConfigRepository.save(config));
     }
@@ -65,6 +69,7 @@ public class AppearanceConfigService {
         return AppearanceSettingsDto.builder()
                 .theme(sanitize(config.getTheme()))
                 .wallpaper(mapWallpaper(config))
+                .mobileWallpaper(mapMobileWallpaper(config))
                 .build();
     }
 
@@ -73,6 +78,24 @@ public class AppearanceConfigService {
         String src = sanitize(config.getWallpaperSrc());
         String id = sanitize(config.getWallpaperId());
         Boolean isLight = config.getWallpaperIsLight();
+
+        if (kind == null && src == null && id == null && isLight == null) {
+            return null;
+        }
+
+        return WallpaperSettingsDto.builder()
+                .kind(kind)
+                .src(src)
+                .id(id)
+                .isLight(isLight)
+                .build();
+    }
+
+    private WallpaperSettingsDto mapMobileWallpaper(AppearanceConfig config) {
+        String kind = sanitize(config.getMobileWallpaperKind());
+        String src = sanitize(config.getMobileWallpaperSrc());
+        String id = sanitize(config.getMobileWallpaperId());
+        Boolean isLight = config.getMobileWallpaperIsLight();
 
         if (kind == null && src == null && id == null && isLight == null) {
             return null;

@@ -50,6 +50,17 @@ public class AppearanceConfig {
 
     private Boolean wallpaperIsLight;
 
+    @Column(length = 16)
+    private String mobileWallpaperKind;
+
+    @Column(length = 255)
+    private String mobileWallpaperSrc;
+
+    @Column(length = 80)
+    private String mobileWallpaperId;
+
+    private Boolean mobileWallpaperIsLight;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
