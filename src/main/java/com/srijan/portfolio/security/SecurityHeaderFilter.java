@@ -53,6 +53,7 @@ public class SecurityHeaderFilter extends OncePerRequestFilter {
         // 2. Skip validation for entirely public API branch (except Auth)
         // Note: Refresh is in /api/auth/ and MUST be protected.
         if (path.startsWith("/api/public/") || 
+            path.startsWith("/api/cron/") ||
             path.equals("/api/auth/login") || 
             path.equals("/api/auth/register") ||
             path.startsWith("/api/auth/otp/")) {
