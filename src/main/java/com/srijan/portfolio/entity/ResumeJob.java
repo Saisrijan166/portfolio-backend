@@ -26,7 +26,7 @@ public class ResumeJob {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, length = 32)
+    @Column(nullable = false, length = 20)
     private String status;
 
     @Lob

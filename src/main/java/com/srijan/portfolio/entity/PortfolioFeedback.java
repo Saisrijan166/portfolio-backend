@@ -38,7 +38,7 @@ public class PortfolioFeedback {
     @Column(name = "visitor_token_hash", length = 64)
     private String visitorTokenHash;
 
-    @Column(name = "submitter_name", length = 120)
+    @Column(name = "submitter_name", length = 60)
     private String submitterName;
 
     @Column

@@ -29,22 +29,22 @@ public class CertificationAchievement {
     @Column(length = 32, nullable = false)
     private String type;
 
-    @Column(length = 100, nullable = false)
+    @Column(length = 60, nullable = false)
     private String title;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String issuer;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String issuedOn;
 
-    @Column(length = 1000)
+    @Column(length = 600)
     private String description;
 
-    @Column(length = 512)
+    @Column(length = 255)
     private String referenceUrl;
 
-    @Column(length = 512)
+    @Column(length = 255)
     private String imageUrl;
 
     @CreationTimestamp

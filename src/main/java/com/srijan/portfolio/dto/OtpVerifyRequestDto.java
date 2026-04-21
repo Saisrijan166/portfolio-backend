@@ -13,7 +13,7 @@ public class OtpVerifyRequestDto {
 
     @NotBlank
     @Email
-    @Size(max = 255)
+    @Size(max = 80)
     private String email;
 
     @NotBlank

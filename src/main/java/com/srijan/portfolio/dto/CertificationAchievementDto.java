@@ -25,24 +25,24 @@ public class CertificationAchievementDto {
     private String type;
 
     @NotBlank
-    @Size(max = 50)
+    @Size(max = 30)
     private String title;
 
-    @Size(max = 50)
+    @Size(max = 60)
     private String issuer;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     @JsonDeserialize(using = FlexibleLocalDateDeserializer.class)
     private LocalDate issuedOn;
 
-    @Size(max = 200)
+    @Size(max = 150)
     private String description;
 
-    @Size(max = 512)
+    @Size(max = 255)
     @Pattern(regexp = "^(https?://.+)?$", message = "Reference link must be a valid URL")
     private String referenceUrl;
 
-    @Size(max = 512)
+    @Size(max = 255)
     @Pattern(regexp = "^(https?://.+)?$", message = "Image link must be a valid URL")
     private String imageUrl;
 }

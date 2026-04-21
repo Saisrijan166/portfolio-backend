@@ -14,11 +14,11 @@ import java.util.List;
 @AllArgsConstructor
 public class DesktopWidgetsDto {
     @Size(max = 8)
-    private List<@Size(max = 80) String> bottomLeftPrimary;
+    private List<@Size(max = 60) String> bottomLeftPrimary;
 
     @Size(max = 8)
-    private List<@Size(max = 80) String> bottomLeftSecondary;
+    private List<@Size(max = 60) String> bottomLeftSecondary;
 
     @Size(max = 8)
-    private List<@Size(max = 80) String> topRight;
+    private List<@Size(max = 60) String> topRight;
 }

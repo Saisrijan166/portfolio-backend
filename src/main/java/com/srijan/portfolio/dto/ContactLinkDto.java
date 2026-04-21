@@ -14,11 +14,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ContactLinkDto {
     @NotBlank
-    @Size(max = 100)
+    @Size(max = 60)
     private String label;
 
     @NotBlank
     @Pattern(regexp = "^(https?://.+|mailto:.+)$", message = "Link must be a valid URL or mailto link")
-    @Size(max = 512)
+    @Size(max = 255)
     private String url;
 }

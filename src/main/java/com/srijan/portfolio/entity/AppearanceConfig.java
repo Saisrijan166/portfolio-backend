@@ -42,10 +42,10 @@ public class AppearanceConfig {
     @Column(length = 16)
     private String wallpaperKind;
 
-    @Column(length = 255)
+    @Column(length = 100)
     private String wallpaperSrc;
 
-    @Column(length = 80)
+    @Column(length = 60)
     private String wallpaperId;
 
     private Boolean wallpaperIsLight;
@@ -53,10 +53,10 @@ public class AppearanceConfig {
     @Column(length = 16)
     private String mobileWallpaperKind;
 
-    @Column(length = 255)
+    @Column(length = 100)
     private String mobileWallpaperSrc;
 
-    @Column(length = 80)
+    @Column(length = 60)
     private String mobileWallpaperId;
 
     private Boolean mobileWallpaperIsLight;

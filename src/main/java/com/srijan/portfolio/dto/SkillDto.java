@@ -16,11 +16,11 @@ import lombok.NoArgsConstructor;
 public class SkillDto {
     private Long id;
 
-    @Size(max = 100)
+    @Size(max = 30)
     private String domain;
 
     @NotBlank
-    @Size(max = 100)
+    @Size(max = 30)
     private String name;
 
     @Min(0)
@@ -29,6 +29,6 @@ public class SkillDto {
 
     private boolean isMetaSkill;
 
-    @Size(max = 500)
+    @Size(max = 100)
     private String metaDescription;
 }

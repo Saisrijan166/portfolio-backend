@@ -27,15 +27,15 @@ public class Skill {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(length = 100)
+    @Column(length = 30)
     private String domain; // "Frontend Engineering", "Backend & Systems"
 
-    @Column(length = 100)
+    @Column(length = 30)
     private String name; // e.g. "React"
     private int level; // 1=Beginner, 2=Intermediate, 3=Advanced, 4=Expert
 
     private boolean isMetaSkill;
-    @Column(length = 500)
+    @Column(length = 100)
     private String metaDescription; // For "System Thinking" meta skills
 
     @CreationTimestamp

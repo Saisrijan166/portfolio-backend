@@ -24,25 +24,25 @@ public class Education {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(length = 100)
+    @Column(length = 20)
     private String level; // e.g., "Intermediate", "High School"
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String institute;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String location;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String degree; // "Science Stream", "ICSE Board"
 
-    @Column(length = 100)
+    @Column(length = 20)
     private String scoreLabel; // "Percentage", "CGPA"
 
-    @Column(length = 100)
+    @Column(length = 20)
     private String scoreValue; // "91%", "95%"
 
-    @Column(length = 100)
+    @Column(length = 25)
     private String duration; // "2020 - 2022"
 
     @CreationTimestamp

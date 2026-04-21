@@ -18,14 +18,14 @@ import java.util.List;
 public class ContactDto {
     @NotBlank
     @Email
-    @Size(max = 255)
+    @Size(max = 80)
     private String primaryEmail;
 
     @Valid
-    @Size(max = 10)
+    @Size(max = 5)
     private List<ContactLinkDto> professionalLinks;
 
     @Valid
-    @Size(max = 10)
+    @Size(max = 5)
     private List<ContactLinkDto> socialLinks;
 }

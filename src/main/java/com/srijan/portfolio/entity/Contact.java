@@ -25,22 +25,22 @@ public class Contact {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @Column(length = 255)
+    @Column(length = 80)
     private String primaryEmail;
 
     @ElementCollection
     @CollectionTable(name = "contact_professional_links", joinColumns = @JoinColumn(name = "contact_id"))
     @AttributeOverrides({
-            @AttributeOverride(name = "label", column = @Column(name = "label", length = 100)),
-            @AttributeOverride(name = "url", column = @Column(name = "url", length = 512))
+            @AttributeOverride(name = "label", column = @Column(name = "label", length = 60)),
+            @AttributeOverride(name = "url", column = @Column(name = "url", length = 100))
     })
     private List<ContactLink> professionalLinks;
 
     @ElementCollection
     @CollectionTable(name = "contact_social_links", joinColumns = @JoinColumn(name = "contact_id"))
     @AttributeOverrides({
-            @AttributeOverride(name = "label", column = @Column(name = "label", length = 100)),
-            @AttributeOverride(name = "url", column = @Column(name = "url", length = 512))
+            @AttributeOverride(name = "label", column = @Column(name = "label", length = 60)),
+            @AttributeOverride(name = "url", column = @Column(name = "url", length = 100))
     })
     private List<ContactLink> socialLinks;
 

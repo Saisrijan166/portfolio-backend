@@ -26,25 +26,25 @@ public class About {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String name;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String roleTitle;
 
     @Column(length = 500)
     private String bio;
 
-    @Column(length = 512)
+    @Column(length = 255)
     private String image;
 
-    @Column(length = 50)
+    @Column(length = 60)
     private String location;
 
-    @Column(length = 50)
+    @Column(length = 60)
     private String availability;
 
-    @Column(length = 50)
+    @Column(length = 60)
     private String experienceYears;
 
     @Column(columnDefinition = "TEXT")

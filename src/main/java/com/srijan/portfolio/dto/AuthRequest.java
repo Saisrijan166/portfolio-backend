@@ -16,7 +16,7 @@ public class AuthRequest {
     @Size(max = 31)
     private String username;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String identifier;
 
     @NotBlank

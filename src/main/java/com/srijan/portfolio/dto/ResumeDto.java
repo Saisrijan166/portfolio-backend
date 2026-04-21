@@ -18,9 +18,9 @@ public class ResumeDto {
             regexp = "^(https?://(localhost|\\d{1,3}(?:\\.\\d{1,3}){3}|(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,})(?::\\d{1,5})?(?:/\\S*)?|/\\S+)$",
             message = "Resume URL must be a valid absolute URL or absolute path"
     )
-    @Size(max = 512)
+    @Size(max = 255)
     private String resumeUrl;
 
-    @Size(max = 255)
+    @Size(max = 150)
     private String lastUpdated;
 }

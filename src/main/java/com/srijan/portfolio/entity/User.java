@@ -39,7 +39,7 @@ public class User {
     private boolean isEmailVerified = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 16, columnDefinition = "varchar(16) default 'ACTIVE'")
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(16) default 'ACTIVE'")
     @Builder.Default
     private UserStatus status = UserStatus.ACTIVE;
 

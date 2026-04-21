@@ -13,10 +13,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PrincipleDto {
     @NotBlank
-    @Size(max = 60)
+    @Size(max = 30)
     private String title;
 
     @NotBlank
-    @Size(max = 255)
+    @Size(max = 125)
     private String description;
 }

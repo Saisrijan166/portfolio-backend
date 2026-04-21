@@ -23,9 +23,9 @@ public class AboutPrinciple {
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;
 
-    @Column(length = 60, nullable = false)
+    @Column(length = 30, nullable = false)
     private String title;
 
-    @Column(length = 255, nullable = false)
+    @Column(length = 125, nullable = false)
     private String description;
 }

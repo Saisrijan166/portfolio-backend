@@ -28,13 +28,13 @@ public class Experience {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String company;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String roleTitle;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String duration; // e.g. "Jan 2023 - Present"
 
     private Integer startMonth;
@@ -46,39 +46,39 @@ public class Experience {
 
     @ElementCollection
     @CollectionTable(name = "experience_responsibilities", joinColumns = @JoinColumn(name = "experience_id"))
-    @Column(name = "responsibility", length = 1000)
+    @Column(name = "responsibility", length = 600)
     private List<String> responsibilities;
 
     @ElementCollection
     @CollectionTable(name = "experience_achievements", joinColumns = @JoinColumn(name = "experience_id"))
-    @Column(name = "achievement", length = 1000)
+    @Column(name = "achievement", length = 600)
     private List<String> achievements;
 
     @ElementCollection
     @CollectionTable(name = "experience_skills", joinColumns = @JoinColumn(name = "experience_id"))
-    @Column(name = "skill", length = 255)
+    @Column(name = "skill", length = 20)
     private List<String> skills;
 
     // Flag to separate "Professional Experience" vs "Academic Journey"
     private boolean isAcademic;
 
     // Academic specific fields
-    @Column(length = 100)
+    @Column(length = 60)
     private String level;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String institute;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String location;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String degree;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String scoreLabel; // e.g. "GPA", "Percentage"
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String scoreValue;
 
     @CreationTimestamp

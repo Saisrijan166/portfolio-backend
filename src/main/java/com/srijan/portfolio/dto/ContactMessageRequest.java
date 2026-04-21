@@ -14,10 +14,10 @@ import lombok.NoArgsConstructor;
 public class ContactMessageRequest {
 
     @NotBlank
-    @Size(max = 160)
+    @Size(max = 100)
     private String subject;
 
     @NotBlank
-    @Size(max = 5000)
+    @Size(max = 600)
     private String message;
 }

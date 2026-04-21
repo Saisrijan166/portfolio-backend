@@ -13,39 +13,39 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ProfileDto {
-    @Size(max = 100)
+    @Size(max = 60)
     private String name;
 
-    @Size(max = 100)
+    @Size(max = 60)
     private String roleTitle;
 
-    @Size(max = 50)
+    @Size(max = 60)
     private String location;
 
-    @Size(max = 50)
+    @Size(max = 60)
     private String availability;
 
     @Email
-    @Size(max = 255)
+    @Size(max = 80)
     private String primaryEmail;
 
     @Valid
-    @Size(max = 10)
+    @Size(max = 5)
     private java.util.List<ContactLinkDto> professionalLinks;
 
     @Valid
-    @Size(max = 10)
+    @Size(max = 5)
     private java.util.List<ContactLinkDto> socialLinks;
 
-    @Size(max = 100)
+    @Size(max = 60)
     private String osName;
 
-    @Size(max = 100)
+    @Size(max = 60)
     private String accountType;
 
-    @Size(max = 100)
+    @Size(max = 60)
     private String access;
 
-    @Size(max = 100)
+    @Size(max = 60)
     private String roleDescription;
 }

@@ -25,32 +25,32 @@ public class Profile {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String osName;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String accountType;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String access;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String roleDescription;
 
     // Profile module fields
-    @Column(length = 100)
+    @Column(length = 60)
     private String profileName;
 
-    @Column(length = 100)
+    @Column(length = 60)
     private String profileRoleTitle;
 
-    @Column(length = 50)
+    @Column(length = 60)
     private String profileLocation;
 
-    @Column(length = 50)
+    @Column(length = 60)
     private String profileAvailability;
 
-    @Column(length = 255)
+    @Column(length = 80)
     private String profilePrimaryEmail;
 
     @Column(columnDefinition = "TEXT")

@@ -14,10 +14,10 @@ public class WallpaperSettingsDto {
     @Size(max = 16)
     private String kind;
 
-    @Size(max = 255)
+    @Size(max = 100)
     private String src;
 
-    @Size(max = 80)
+    @Size(max = 60)
     private String id;
 
     private Boolean isLight;
