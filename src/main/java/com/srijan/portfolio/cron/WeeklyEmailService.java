@@ -47,7 +47,7 @@ public class WeeklyEmailService {
             ),
             new EmailVariant(
                     "This is not what you want 😄",
-                    "\nIf someone opens your portfolio today…\nthey’ll see exactly what they saw last week.\nNo new projects. No updates.\nThat might not be the impression you want to leave.",
+                    "\nIf someone opens your portfolio today…\nThey’ll see exactly what they saw last week.\nNo new projects. No updates.\nThat might not be the impression you want to leave.",
                     "Make a quick update"
             ),
             new EmailVariant(
