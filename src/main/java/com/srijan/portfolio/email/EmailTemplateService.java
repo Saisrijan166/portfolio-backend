@@ -47,9 +47,11 @@ public class EmailTemplateService {
         if (tKey != null && !tKey.isBlank()) {
             safeVariables.put("DASHBOARD_URL", escape(validateUrl(appUrl + "/dashboard/" + tKey, "DASHBOARD_URL")));
             safeVariables.put("PORTFOLIO_URL", escape(validateUrl(appUrl + "/" + tKey, "PORTFOLIO_URL")));
+            safeVariables.put("LANDING_PAGE_URL", escape(validateUrl(appUrl, "LANDING_PAGE_URL")));
         } else {
             safeVariables.put("DASHBOARD_URL", escape(validateUrl(appUrl + "/login", "DASHBOARD_URL")));
             safeVariables.put("PORTFOLIO_URL", escape(appUrl));
+            safeVariables.put("LANDING_PAGE_URL", escape(appUrl));
         }
         safeVariables.put("SUPPORT_EMAIL", escape(tenantContext.supportEmail()));
         safeVariables.put("PRIMARY_COLOR", escape(validateColor(tenantContext.primaryColor(), "PRIMARY_COLOR")));
