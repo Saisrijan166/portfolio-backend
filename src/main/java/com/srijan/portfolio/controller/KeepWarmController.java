@@ -16,7 +16,7 @@ import java.util.Map;
 import com.srijan.portfolio.repository.UserRepository;
 
 @RestController
-@RequestMapping("/api/system")
+@RequestMapping("/api/users")
 public class KeepWarmController {
 
     private static final Logger logger = LoggerFactory.getLogger(KeepWarmController.class);
@@ -24,8 +24,8 @@ public class KeepWarmController {
     @Autowired
     private UserRepository userRepository;
 
-    @GetMapping("/keep-warm")
-    public ResponseEntity<Map<String, Object>> keepWarm() {
+    @GetMapping("/count")
+    public ResponseEntity<Map<String, Object>> count() {
         long startTime = System.currentTimeMillis();
         
         try {
