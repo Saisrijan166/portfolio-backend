@@ -42,35 +42,38 @@ public class ResumeGeneratorService {
         }
 
         String latexSource = buildLatex(portfolio, username);
-                
+
         Path tempDir = null;
         try {
             tempDir = Files.createTempDirectory("resume_gen_" + username);
             Path texFile = tempDir.resolve("resume.tex");
             Files.writeString(texFile, latexSource);
 
-            ProcessBuilder pb = new ProcessBuilder(
-                    "pdflatex",
-                    "-interaction=nonstopmode",
-                    "-output-directory=" + tempDir.toAbsolutePath().toString(),
-                    texFile.toAbsolutePath().toString()
-            );
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            
-            String output = new String(process.getInputStream().readAllBytes());
-            int exitCode = process.waitFor();
-            
-            if (exitCode != 0) {
-                log.error("pdflatex failed with exit code {}: {}", exitCode, output);
-                throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "PDF_GENERATION_FAILED", "Failed to generate PDF");
+            // Run pdflatex twice for proper rendering
+            for (int i = 0; i < 2; i++) {
+                ProcessBuilder pb = new ProcessBuilder(
+                        "pdflatex",
+                        "-interaction=nonstopmode",
+                        "-output-directory=" + tempDir.toAbsolutePath().toString(),
+                        texFile.toAbsolutePath().toString()
+                );
+                pb.redirectErrorStream(true);
+                Process process = pb.start();
+
+                String output = new String(process.getInputStream().readAllBytes());
+                int exitCode = process.waitFor();
+
+                if (exitCode != 0) {
+                    log.error("pdflatex failed with exit code {}: {}", exitCode, output);
+                    throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "PDF_GENERATION_FAILED", "Failed to generate PDF");
+                }
             }
-            
+
             Path pdfFile = tempDir.resolve("resume.pdf");
             if (!Files.exists(pdfFile)) {
                 throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "PDF_GENERATION_FAILED", "PDF file not created");
             }
-            
+
             return Files.readAllBytes(pdfFile);
 
         } catch (Exception e) {
@@ -80,8 +83,8 @@ public class ResumeGeneratorService {
             if (tempDir != null) {
                 try (Stream<Path> walk = Files.walk(tempDir)) {
                     walk.sorted(Comparator.reverseOrder())
-                        .map(Path::toFile)
-                        .forEach(File::delete);
+                            .map(Path::toFile)
+                            .forEach(File::delete);
                 } catch (IOException e) {
                     log.warn("Failed to clean up temp directory {}", tempDir, e);
                 }
@@ -91,9 +94,9 @@ public class ResumeGeneratorService {
 
     private String buildLatex(PortfolioResponse p, String username) {
         StringBuilder sb = new StringBuilder();
-        
-        // Preamble
-        sb.append("\\documentclass[a4paper,20pt]{article}\n")
+
+        // ─── Preamble (mirrors original .tex exactly) ───────────────────────
+        sb.append("\\documentclass[a4paper,11pt]{article}\n\n")
           .append("\\usepackage{latexsym}\n")
           .append("\\usepackage[empty]{fullpage}\n")
           .append("\\usepackage{titlesec}\n")
@@ -106,123 +109,166 @@ public class ResumeGeneratorService {
           .append("\\usepackage{graphicx}\n")
           .append("\\usepackage{fontawesome5}\n")
           .append("\\usepackage{simpleicons}\n")
+          .append("\\usepackage[table]{xcolor}\n")
+          .append("\\usepackage{tikz}\n\n")
           .append("\\pagestyle{fancy}\n")
           .append("\\fancyhf{}\n")
           .append("\\fancyfoot{}\n")
           .append("\\renewcommand{\\headrulewidth}{0pt}\n")
-          .append("\\renewcommand{\\footrulewidth}{0pt}\n")
+          .append("\\renewcommand{\\footrulewidth}{0pt}\n\n")
+          // Margins — slightly more generous top/bottom than original for whitespace
           .append("\\addtolength{\\oddsidemargin}{-0.530in}\n")
           .append("\\addtolength{\\evensidemargin}{-0.375in}\n")
           .append("\\addtolength{\\textwidth}{1in}\n")
-          .append("\\addtolength{\\topmargin}{-.65in}\n")
-          .append("\\addtolength{\\textheight}{1.3in}\n")
+          .append("\\addtolength{\\topmargin}{-.50in}\n")
+          .append("\\addtolength{\\textheight}{1.0in}\n\n")
           .append("\\urlstyle{rm}\n")
           .append("\\raggedbottom\n")
           .append("\\raggedright\n")
-          .append("\\setlength{\\tabcolsep}{0in}\n")
-          .append("\\titleformat{\\section}{\\vspace{-10pt}\\scshape\\raggedright\\large}{}{0em}{}[\\color{black}\\titlerule \\vspace{-6pt}]\n")
-          .append("\\newcommand{\\resumeItem}[2]{\\item\\small{\\textbf{#1}{: #2 \\vspace{-2pt}}}}\n")
-          .append("\\newcommand{\\resumeItemWithoutTitle}[1]{\\item\\small{{\\vspace{-2pt}}}}\n")
-          .append("\\newcommand{\\resumeSubheading}[4]{\\vspace{-1pt}\\item\\begin{tabular*}{0.97\\textwidth}{l@{\\extracolsep{\\fill}}r}\\textbf{#1} & #2 \\\\ \\textit{#3} & \\textit{#4} \\\\ \\end{tabular*}\\vspace{-5pt}}\n")
-          .append("\\newcommand{\\resumeSubItem}[2]{\\resumeItem{#1}{#2}\\vspace{-3pt}}\n")
-          .append("\\renewcommand{\\labelitemii}{$\\circ$}\n")
+          .append("\\setlength{\\tabcolsep}{0in}\n\n")
+          // Section formatting
+          .append("\\titleformat{\\section}{\n")
+          .append("  \\vspace{-10pt}\\scshape\\raggedright\\large\n")
+          .append("}{}{0em}{}[\\color{black}\\titlerule \\vspace{-6pt}]\n\n")
+          // Custom commands — identical to original
+          .append("\\newcommand{\\resumeItem}[2]{\n")
+          .append("  \\item\\small{\n")
+          .append("    \\textbf{#1}{: #2 \\vspace{-2pt}}\n")
+          .append("  }\n")
+          .append("}\n\n")
+          .append("\\newcommand{\\resumeItemWithoutTitle}[1]{\n")
+          .append("  \\item\\small{\n")
+          .append("    {\\vspace{-2pt}}\n")
+          .append("  }\n")
+          .append("}\n\n")
+          .append("\\newcommand{\\resumeSubheading}[4]{\n")
+          .append("  \\vspace{-1pt}\\item\n")
+          .append("    \\begin{tabular*}{0.97\\textwidth}{l@{\\extracolsep{\\fill}}r}\n")
+          .append("      \\textbf{#1} & #2 \\\\\n")
+          .append("      \\textit{#3} & \\textit{#4} \\\\\n")
+          .append("    \\end{tabular*}\\vspace{-5pt}\n")
+          .append("}\n\n")
+          .append("\\newcommand{\\resumeSubItem}[2]{\\resumeItem{#1}{#2}\\vspace{-3pt}}\n\n")
+          .append("\\renewcommand{\\labelitemii}{$\\circ$}\n\n")
           .append("\\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=*]}\n")
           .append("\\newcommand{\\resumeSubHeadingListEnd}{\\end{itemize}}\n")
           .append("\\newcommand{\\resumeItemListStart}{\\begin{itemize}}\n")
-          .append("\\newcommand{\\resumeItemListEnd}{\\end{itemize}\\vspace{-5pt}}\n")
-          .append("\\usepackage[table]{xcolor}\n")
-          .append("\\definecolor{crimson}{rgb}{0.86,0.08,0.24}\n")
-          .append("\\usepackage{tikz}\n")
-          .append("\\begin{document}\n")
-          .append("\\definecolor{lightblack}{rgb}{0.18, 0.31, 0.31}\n")
-          .append("\\hypersetup{colorlinks=true,linkcolor=black,urlcolor=black,citecolor=black,filecolor=black,hidelinks,pdfnewwindow=true}\n");
+          .append("\\newcommand{\\resumeItemListEnd}{\\end{itemize}\\vspace{-5pt}}\n\n")
+          // Color definitions
+          .append("\\definecolor{crimson}{rgb}{0.86,0.08,0.24}\n\n");
 
-        // Header
-        String name = p.getProfile() != null && p.getProfile().getName() != null ? escapeLatex(p.getProfile().getName()) : "Your Name";
-        String role = p.getAbout() != null && p.getAbout().getRoleTitle() != null ? escapeLatex(p.getAbout().getRoleTitle()) : "Professional";
-        
+        // ─── Document begin ──────────────────────────────────────────────────
+        sb.append("\\begin{document}\n\n")
+          .append("\\definecolor{lightblack}{rgb}{0.18, 0.31, 0.31}\n")
+          .append("\\hypersetup{\n")
+          .append("    colorlinks=true,\n")
+          .append("    linkcolor=black,\n")
+          .append("    urlcolor=black,\n")
+          .append("    citecolor=black,\n")
+          .append("    filecolor=black,\n")
+          .append("    hidelinks\n")
+          .append("}\n\n");
+
+        // ─── Header ─────────────────────────────────────────────────────────
+        String name = (p.getProfile() != null && p.getProfile().getName() != null)
+                ? escapeLatex(p.getProfile().getName()) : "Your Name";
+        String role = (p.getAbout() != null && p.getAbout().getRoleTitle() != null)
+                ? escapeLatex(p.getAbout().getRoleTitle()) : "Professional";
+
+        // Split role title on space so it wraps nicely in the small minipage
+        String roleFormatted = role.replace(" ", " \\\\\n");
+
         sb.append("\\noindent\n")
           .append("\\begin{minipage}{0.69\\textwidth}\n")
           .append("    \\raggedright\n")
-          .append("    \\vspace{0cm}\n")
-          .append("{\\LARGE\\bfseries\\sffamily \\textcolor[rgb]{0.86,0.08,0.24} {").append(name).append(" }}\n")
-          .append("\\\\\n")
+          .append("    \\vspace{0.4cm}\n\n")
+          .append("{\\LARGE\\bfseries\\sffamily \\textcolor[rgb]{0.86,0.08,0.24}{").append(name).append("}} \\\\\n")
           .append("\\vspace{0.09cm}\n");
-          
-        sb.append("    \\hspace{0.1cm}{}");
-        
-        // Add default portfolio link
-        String appUrl = tenantBrandingResolver.resolve(username).appUrl();
-        String portfolioUrl = appUrl + "/" + username;
-        sb.append("\\textcolor{lightblack}{\\scalebox{1}{\\faGlobe}} \\href{").append(escapeLatex(portfolioUrl)).append("}{\\bfseries\\rmfamily\\itshape Portfolio} \\hspace{0.4cm}\n");
-        
-        if (p.getContact() != null) {
-            if (p.getContact().getPrimaryEmail() != null && !p.getContact().getPrimaryEmail().isBlank()) {
-                String email = escapeLatex(p.getContact().getPrimaryEmail());
-                sb.append("\\textcolor{lightblack}{\\scalebox{1}{\\faEnvelope[regular]}} \\href{mailto:").append(email).append("}{\\bfseries\\rmfamily\\itshape ").append(email).append("} \\hspace{0.4cm}\n");
-            }
-            // we skip phone if missing since ContactDto might not have it directly mapped to a strong field, wait ContactDto has professionalLinks/socialLinks. Let's look for phone or linkedin.
-            boolean hasLinkedIn = false;
-            boolean hasGithub = false;
-            String portfolioLink = "Portfolio";
-            
-            if (p.getContact().getProfessionalLinks() != null) {
-                for (ContactLinkDto link : p.getContact().getProfessionalLinks()) {
-                    String url = escapeLatex(link.getUrl());
-                    String label = escapeLatex(link.getLabel());
-                    if (label.toLowerCase().contains("linkedin")) {
-                        hasLinkedIn = true;
-                        sb.append("\\textcolor{lightblack}{\\scalebox{1.1}{\\faLinkedin}} \\href{").append(url).append("}{\\bfseries\\rmfamily\\itshape ").append(label).append("}\n");
-                    } else if (label.toLowerCase().contains("github")) {
-                        hasGithub = true;
-                        sb.append("\\hspace{0.5cm}\\textcolor{lightblack}{\\scalebox{1.1}{\\faGithub}}  \\href{").append(url).append("}{\\bfseries\\rmfamily\\itshape ").append(label).append("} \\\\\n");
-                    }
+
+        // Email
+        if (p.getContact() != null && p.getContact().getPrimaryEmail() != null && !p.getContact().getPrimaryEmail().isBlank()) {
+            String email = escapeLatex(p.getContact().getPrimaryEmail());
+            sb.append("\\textcolor{lightblack}{\\scalebox{1}{\\faEnvelope[regular]}} \\href{mailto:")
+              .append(email).append("}{\\bfseries\\rmfamily\\itshape ").append(email).append("} \\hspace{0.4cm}\n");
+        }
+
+        // Portfolio link
+        String appUrl  = tenantBrandingResolver.resolve(username).appUrl();
+        String portfolioUrl = escapeLatex(appUrl + "/" + username);
+
+        sb.append("\\textcolor{lightblack}{\\scalebox{1.1}{\\faGlobe}} \\href{").append(portfolioUrl)
+          .append("}{\\bfseries\\rmfamily\\itshape Portfolio} \\hspace{0.4cm}\n");
+
+        // LinkedIn and GitHub from professional links
+        if (p.getContact() != null && p.getContact().getProfessionalLinks() != null) {
+            for (ContactLinkDto link : p.getContact().getProfessionalLinks()) {
+                if (link.getLabel() == null || link.getUrl() == null) continue;
+                String lbl = link.getLabel().toLowerCase();
+                String url = escapeLatex(link.getUrl());
+                String label = escapeLatex(link.getLabel());
+                if (lbl.contains("linkedin")) {
+                    sb.append("\\textcolor{lightblack}{\\scalebox{1.1}{\\faLinkedin}} \\href{").append(url)
+                      .append("}{\\bfseries\\rmfamily\\itshape ").append(label).append("} \\hspace{0.4cm}\\\\\n");
+                } else if (lbl.contains("github")) {
+                    sb.append("\\textcolor{lightblack}{\\scalebox{1.1}{\\faGithub}} \\href{").append(url)
+                      .append("}{\\bfseries\\rmfamily\\itshape ").append(label).append("}\n");
                 }
             }
-            
-            // if we need more links, we can add them here
         }
-        
+
+        sb.append("\n");
+
         sb.append("\\end{minipage}\n")
           .append("\\hfill\n")
           .append("\\noindent\n")
           .append("\\begin{minipage}{0.085\\textwidth}\n")
           .append("\\vspace{-0.4cm}\n")
-          .append("{\\large\\sffamily\\textcolor{gray}{").append(role).append("}}\n")
-          .append("\\end{minipage}\n")
+          .append("{\\large\\sffamily\\textcolor{gray}{").append(roleFormatted).append("}}\n")
+          .append("\\end{minipage}\n\n")
           .append("\\vspace{1pt}\n");
 
-        // Education
+        // ─── Education ──────────────────────────────────────────────────────
         if (p.getEducations() != null && !p.getEducations().isEmpty()) {
-            sb.append("\\section{\\textcolor[rgb]{0.86,0.08,0.24}{Education}}\n")
-              .append("\\resumeSubHeadingListStart\n");
+            sb.append("%-----------EDUCATION-----------------\n")
+              .append("\\section{\\textcolor[rgb]{0.86,0.08,0.24}{Education}}\n")
+              .append("  \\resumeSubHeadingListStart\n");
+
             for (EducationDto ed : p.getEducations()) {
-                String inst = escapeLatex(ed.getInstitute());
-                String loc = escapeLatex(ed.getLocation());
-                String deg = escapeLatex(ed.getDegree());
-                if (ed.getScoreLabel() != null && !ed.getScoreLabel().isBlank()) {
-                    deg += "; " + escapeLatex(ed.getScoreLabel()) + ": " + escapeLatex(ed.getScoreValue());
+                String inst = ed.getInstitute()  != null ? escapeLatex(ed.getInstitute())  : "";
+                String loc  = ed.getLocation()   != null ? escapeLatex(ed.getLocation())   : "";
+                String dur  = ed.getDuration()   != null ? escapeLatex(ed.getDuration())   : "";
+
+                // Build degree string — "Bachelor of CSE; GPA: 8.17"  (mirrors original)
+                StringBuilder degBuilder = new StringBuilder();
+                if (ed.getDegree() != null && !ed.getDegree().isBlank()) {
+                    degBuilder.append(escapeLatex(ed.getDegree()));
                 }
-                String dur = escapeLatex(ed.getDuration());
-                
-                sb.append("  \\resumeSubheading\n")
-                  .append("    {").append(inst != null ? inst : "").append("}{").append(loc != null ? loc : "").append("}\n")
-                  .append("    {").append(deg != null ? deg : "").append("}{").append(dur != null ? dur : "").append("}\n");
+                if (ed.getScoreLabel() != null && !ed.getScoreLabel().isBlank()
+                        && ed.getScoreValue() != null && !ed.getScoreValue().isBlank()) {
+                    degBuilder.append("; ").append(escapeLatex(ed.getScoreLabel()))
+                              .append(": ").append(escapeLatex(ed.getScoreValue()));
+                }
+
+                sb.append("    \\resumeSubheading\n")
+                  .append("      {").append(inst).append("}{").append(loc).append("}\n")
+                  .append("      {").append(degBuilder).append("}{").append(dur).append("}\n");
             }
-            sb.append("\\resumeSubHeadingListEnd\n");
+            sb.append("  \\resumeSubHeadingListEnd\n\n");
         }
 
-        // Skills
+        // ─── Skills Summary ─────────────────────────────────────────────────
         if (p.getSkills() != null && !p.getSkills().isEmpty()) {
-            sb.append("\\definecolor{lightblack}{rgb}{0.41, 0.41, 0.41}\n")
+            sb.append("\\definecolor{lightblack}{rgb}{0.41, 0.41, 0.41}\n\n")
               .append("\\section{\\textcolor[rgb]{0.86,0.08,0.24}{Skills Summary}}\n")
               .append("\\resumeSubHeadingListStart\n");
+
             Map<String, List<String>> groupedSkills = p.getSkills().stream()
                     .collect(Collectors.groupingBy(
                             s -> s.getDomain() != null ? s.getDomain() : "General",
                             LinkedHashMap::new,
                             Collectors.mapping(SkillDto::getName, Collectors.toList())
                     ));
+
             for (Map.Entry<String, List<String>> entry : groupedSkills.entrySet()) {
                 String domain = escapeLatex(entry.getKey());
                 String skills = entry.getValue().stream()
@@ -230,98 +276,149 @@ public class ResumeGeneratorService {
                         .collect(Collectors.joining(", "));
                 sb.append("\\resumeSubItem{").append(domain).append("}{ ").append(skills).append("}\n");
             }
-            sb.append("\\resumeSubHeadingListEnd\n\\vspace{-5pt}\n");
+            sb.append("\\resumeSubHeadingListEnd\n\n\n")
+              .append("\\vspace{-5pt}\n");
         }
 
-        // Experience
+        // ─── Experience ─────────────────────────────────────────────────────
         if (p.getExperiences() != null && !p.getExperiences().isEmpty()) {
             sb.append("\\section{\\textcolor[rgb]{0.86,0.08,0.24}{Experience}}\n")
               .append("\\resumeSubHeadingListStart\n");
+
             for (ExperienceDto ex : p.getExperiences()) {
-                String title = escapeLatex(ex.getRoleTitle()) + " - " + escapeLatex(ex.getCompany());
-                String dur = escapeLatex(ex.getDuration());
-                String desc = ex.getResponsibilities() != null && !ex.getResponsibilities().isEmpty() 
-                                ? escapeLatex(String.join(", ", ex.getResponsibilities())) 
-                                : "";
-                
+                // Title format: "Role – Company"  (mirrors original em-dash style)
+                String roleTitle = ex.getRoleTitle() != null ? escapeLatex(ex.getRoleTitle()) : "";
+                String company   = ex.getCompany()   != null ? escapeLatex(ex.getCompany())   : "";
+                String title     = roleTitle + " -- " + company;
+                String dur       = ex.getDuration()  != null ? escapeLatex(ex.getDuration())  : "";
+
+                // Responsibilities — join into prose description
+                String desc = "";
+                if (ex.getResponsibilities() != null && !ex.getResponsibilities().isEmpty()) {
+                    desc = ex.getResponsibilities().stream()
+                            .map(this::escapeLatex)
+                            .collect(Collectors.joining(" "));
+                }
+
                 sb.append("\\resumeSubItem{").append(title).append("}\n")
                   .append("{\\textbf{Duration:} ").append(dur).append(" \\\\\n")
                   .append(desc).append("\n}\n");
             }
-            sb.append("\\resumeSubHeadingListEnd\n\\vspace{-6pt}\n");
+            sb.append("\\resumeSubHeadingListEnd\n\n\n");
         }
 
-        // Projects
+        // ─── Projects & Research ────────────────────────────────────────────
         if (p.getProjects() != null && !p.getProjects().isEmpty()) {
-            List<ProjectDto> regProjects = p.getProjects().stream().filter(pr -> !pr.isResearch()).collect(Collectors.toList());
+
+            List<ProjectDto> regProjects = p.getProjects().stream()
+                    .filter(pr -> !pr.isResearch())
+                    .collect(Collectors.toList());
+
             if (!regProjects.isEmpty()) {
-                sb.append("\\section{\\textcolor[rgb]{0.86,0.08,0.24}{Projects}}\n")
-                  .append("\\resumeSubHeadingListStart\n");
+                sb.append("%-----------PROJECTS-----------------\n")
+                  .append("\\vspace{-5pt}\n")
+                  .append("\\section{\\textcolor[rgb]{0.86,0.08,0.24}{Projects}}\n")
+                  .append("\\resumeSubHeadingListStart\n\n");
+
                 for (ProjectDto pr : regProjects) {
-                    String namePr = escapeLatex(pr.getName());
-                    String desc = escapeLatex(pr.getOverview());
-                    String tech = pr.getTechStack() != null ? escapeLatex(String.join(", ", pr.getTechStack())) : "";
-                    
-                    sb.append("\\resumeSubItem{").append(namePr).append("}{").append(desc).append("\\\\\n")
-                      .append("\\textbf{Tech:} ").append(tech).append("}\n")
-                      .append("\\vspace{1pt}\n");
+                    String projName = pr.getName()    != null ? escapeLatex(pr.getName())    : "";
+                    String overview = pr.getOverview() != null ? escapeLatex(pr.getOverview()) : "";
+                    String tech     = (pr.getTechStack() != null && !pr.getTechStack().isEmpty())
+                            ? pr.getTechStack().stream().map(this::escapeLatex).collect(Collectors.joining(", "))
+                            : "";
+
+                    sb.append("\\resumeSubItem{").append(projName).append("}{").append(overview).append("\\\\\n");
+                    if (!tech.isBlank()) {
+                        sb.append("\\textbf{Tech:} ").append(tech);
+                    }
+                    sb.append("}\n").append("\\vspace{1pt}\n\n");
                 }
-                sb.append("\\resumeSubHeadingListEnd\n\\vspace{-7pt}\n");
+                sb.append("\\resumeSubHeadingListEnd\n\n")
+                  .append("\\vspace{-7pt}\n");
             }
 
-            List<ProjectDto> resProjects = p.getProjects().stream().filter(pr -> pr.isResearch()).collect(Collectors.toList());
+            // Research section — separate, like original
+            List<ProjectDto> resProjects = p.getProjects().stream()
+                    .filter(pr -> pr.isResearch())
+                    .collect(Collectors.toList());
+
             if (!resProjects.isEmpty()) {
                 sb.append("\\section{\\textcolor[rgb]{0.86,0.08,0.24}{Research}}\n")
                   .append("\\resumeSubHeadingListStart\n");
+
                 for (ProjectDto pr : resProjects) {
-                    String namePr = escapeLatex(pr.getName());
-                    String desc = escapeLatex(pr.getOverview());
-                    
-                    sb.append("\\resumeSubItem{").append(namePr).append("}{").append(desc).append("}\n")
-                      .append("\\vspace{-2pt}\n");
+                    String projName = pr.getName()    != null ? escapeLatex(pr.getName())    : "";
+                    String overview = pr.getOverview() != null ? escapeLatex(pr.getOverview()) : "";
+
+                    sb.append("\\resumeSubItem{").append(projName).append("}{").append(overview).append("}\n")
+                      .append("\\vspace{-2pt}\n\n");
                 }
-                sb.append("\\resumeSubHeadingListEnd\n\\vspace{-6pt}\n");
+                sb.append("\\resumeSubHeadingListEnd\n\n\n")
+                  .append("\\vspace{-6pt}\n");
             }
         }
 
-        // Certifications & Achievements
+        // ─── Certifications & Awards ─────────────────────────────────────────
         if (p.getCertificationAchievements() != null && !p.getCertificationAchievements().isEmpty()) {
-            List<CertificationAchievementDto> certs = p.getCertificationAchievements().stream().filter(c -> "certification".equalsIgnoreCase(c.getType())).collect(Collectors.toList());
+
+            List<CertificationAchievementDto> certs = p.getCertificationAchievements().stream()
+                    .filter(c -> "certification".equalsIgnoreCase(c.getType()))
+                    .collect(Collectors.toList());
+
             if (!certs.isEmpty()) {
-                sb.append("\\section{\\textcolor[rgb]{0.86,0.08,0.24}{Certifications}}\n")
-                  .append("\\resumeSubHeadingListStart\n");
+                sb.append("\\section{\\textcolor[rgb]{0.86,0.08,0.24}{Certifications \\& Awards}}\n")
+                  .append("\\resumeSubHeadingListStart\n\n");
+
                 for (CertificationAchievementDto c : certs) {
-                    sb.append("\\resumeSubItem{").append(escapeLatex(c.getTitle())).append("}{").append(escapeLatex(c.getDescription() != null ? c.getDescription() : c.getIssuer())).append("}\n");
+                    String certTitle = escapeLatex(c.getTitle());
+                    // Prefer description; fall back to issuer — mirrors original
+                    String certDesc  = (c.getDescription() != null && !c.getDescription().isBlank())
+                            ? escapeLatex(c.getDescription())
+                            : (c.getIssuer() != null ? escapeLatex(c.getIssuer()) : "");
+                    sb.append("\\resumeSubItem{").append(certTitle).append("}{").append(certDesc).append("}\n");
                 }
-                sb.append("\\resumeSubHeadingListEnd\n\\vspace{-6pt}\n");
+                sb.append("\\resumeSubHeadingListEnd\n\n\n")
+                  .append("\\vspace{-6pt}\n");
             }
 
-            List<CertificationAchievementDto> achs = p.getCertificationAchievements().stream().filter(c -> "achievement".equalsIgnoreCase(c.getType())).collect(Collectors.toList());
+            // ─── Achievements ────────────────────────────────────────────────
+            List<CertificationAchievementDto> achs = p.getCertificationAchievements().stream()
+                    .filter(c -> "achievement".equalsIgnoreCase(c.getType()))
+                    .collect(Collectors.toList());
+
             if (!achs.isEmpty()) {
-                sb.append("\\section{\\textcolor[rgb]{0.86,0.08,0.24}{Achievements}}\n")
-                  .append("\\begin{description}[font=\\bullet]\n");
+                sb.append("%-----------Achievements-----------------\n")
+                  .append("\\section{\\textcolor[rgb]{0.86,0.08,0.24}{Achievements}}\n")
+                  .append("\\begin{description}[font=$\\bullet$]\n");
+
                 for (CertificationAchievementDto a : achs) {
-                    sb.append("\\item {").append(escapeLatex(a.getTitle())).append("}\n\\vspace{-5pt}\n");
+                    sb.append("\\item {").append(escapeLatex(a.getTitle())).append("}\n")
+                      .append("\\vspace{-5pt}\n");
                 }
-                sb.append("\\end{description}\n");
+                sb.append("\\end{description}\n\n");
             }
         }
 
-        sb.append("\\end{document}\n");
+        sb.append("\n\\end{document}\n");
         return sb.toString();
     }
 
+    /**
+     * Escapes all LaTeX special characters.
+     * Order matters — backslash must be handled first.
+     */
     private String escapeLatex(String s) {
         if (s == null) return "";
-        return s.replace("\\", "\\textbackslash{}")
-                .replace("{", "\\{")
-                .replace("}", "\\}")
-                .replace("$", "\\$")
-                .replace("&", "\\&")
-                .replace("#", "\\#")
-                .replace("^", "\\textasciicircum{}")
-                .replace("_", "\\_")
-                .replace("~", "\\textasciitilde{}")
-                .replace("%", "\\%");
+        return s
+                .replace("\\", "\\textbackslash{}")
+                .replace("{",  "\\{")
+                .replace("}",  "\\}")
+                .replace("$",  "\\$")
+                .replace("&",  "\\&")
+                .replace("#",  "\\#")
+                .replace("^",  "\\textasciicircum{}")
+                .replace("_",  "\\_")
+                .replace("~",  "\\textasciitilde{}")
+                .replace("%",  "\\%");
     }
 }
