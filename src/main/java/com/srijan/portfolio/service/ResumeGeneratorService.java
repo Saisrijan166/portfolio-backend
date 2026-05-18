@@ -194,7 +194,7 @@ public class ResumeGeneratorService {
 
         // Portfolio link
         String appUrl  = tenantBrandingResolver.resolve(username).appUrl();
-        String portfolioUrl = escapeLatex(appUrl + "/" + username);
+        String portfolioUrl = escapeLatexUrl(appUrl + "/" + username);
 
         sb.append("\\textcolor{lightblack}{\\scalebox{1.1}{\\faGlobe}} \\href{").append(portfolioUrl)
           .append("}{\\bfseries\\rmfamily\\itshape Portfolio} \\hspace{0.4cm}\n");
@@ -204,7 +204,7 @@ public class ResumeGeneratorService {
             for (ContactLinkDto link : p.getContact().getProfessionalLinks()) {
                 if (link.getLabel() == null || link.getUrl() == null) continue;
                 String lbl = link.getLabel().toLowerCase();
-                String url = escapeLatex(link.getUrl());
+                String url = escapeLatexUrl(link.getUrl());
                 String label = escapeLatex(link.getLabel());
                 if (lbl.contains("linkedin")) {
                     sb.append("\\textcolor{lightblack}{\\scalebox{1.1}{\\faLinkedin}} \\href{").append(url)
@@ -401,6 +401,18 @@ public class ResumeGeneratorService {
 
         sb.append("\n\\end{document}\n");
         return sb.toString();
+    }
+
+    /**
+     * Minimal escaping for URLs in \href{}.
+     * Hyperref handles most characters; only escape those that break LaTeX parsing.
+     */
+    private String escapeLatexUrl(String url) {
+        if (url == null) return "";
+        // Only escape braces which would break LaTeX syntax
+        return url
+                .replace("{", "\\{")
+                .replace("}", "\\}");
     }
 
     /**
