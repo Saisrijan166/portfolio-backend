@@ -3,6 +3,7 @@ package com.srijan.portfolio.service;
 import com.srijan.portfolio.dto.*;
 import com.srijan.portfolio.exception.ApiException;
 import lombok.RequiredArgsConstructor;
+import com.srijan.portfolio.email.TenantBrandingResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,13 +25,14 @@ import java.util.stream.Stream;
 public class ResumeGeneratorService {
 
     private final PortfolioService portfolioService;
+    private final TenantBrandingResolver tenantBrandingResolver;
 
     public String generateResumeTex(String username) {
         PortfolioResponse portfolio = portfolioService.getPortfolioByUsername(username);
         if (portfolio == null) {
             throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found");
         }
-        return buildLatex(portfolio);
+        return buildLatex(portfolio, username);
     }
 
     public byte[] generateResumePdf(String username) {
@@ -39,7 +41,7 @@ public class ResumeGeneratorService {
             throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found");
         }
 
-        String latexSource = buildLatex(portfolio);
+        String latexSource = buildLatex(portfolio, username);
                 
         Path tempDir = null;
         try {
@@ -87,7 +89,7 @@ public class ResumeGeneratorService {
         }
     }
 
-    private String buildLatex(PortfolioResponse p) {
+    private String buildLatex(PortfolioResponse p, String username) {
         StringBuilder sb = new StringBuilder();
         
         // Preamble
@@ -133,7 +135,7 @@ public class ResumeGeneratorService {
           .append("\\usepackage{tikz}\n")
           .append("\\begin{document}\n")
           .append("\\definecolor{lightblack}{rgb}{0.18, 0.31, 0.31}\n")
-          .append("\\hypersetup{colorlinks=true,linkcolor=black,urlcolor=black,citecolor=black,filecolor=black,hidelinks}\n");
+          .append("\\hypersetup{colorlinks=true,linkcolor=black,urlcolor=black,citecolor=black,filecolor=black,hidelinks,pdfnewwindow=true}\n");
 
         // Header
         String name = p.getProfile() != null && p.getProfile().getName() != null ? escapeLatex(p.getProfile().getName()) : "Your Name";
@@ -148,6 +150,11 @@ public class ResumeGeneratorService {
           .append("\\vspace{0.09cm}\n");
           
         sb.append("    \\hspace{0.1cm}{}");
+        
+        // Add default portfolio link
+        String appUrl = tenantBrandingResolver.resolve(username).appUrl();
+        String portfolioUrl = appUrl + "/" + username;
+        sb.append("\\textcolor{lightblack}{\\scalebox{1}{\\faGlobe}} \\href{").append(escapeLatex(portfolioUrl)).append("}{\\bfseries\\rmfamily\\itshape Portfolio} \\hspace{0.4cm}\n");
         
         if (p.getContact() != null) {
             if (p.getContact().getPrimaryEmail() != null && !p.getContact().getPrimaryEmail().isBlank()) {
