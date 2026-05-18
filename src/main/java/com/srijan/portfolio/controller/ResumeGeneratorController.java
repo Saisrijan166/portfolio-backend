@@ -30,4 +30,20 @@ public class ResumeGeneratorController {
                 .headers(headers)
                 .body(pdfBytes);
     }
+
+    @GetMapping("/api/public/portfolio/{username}/resume/generate/tex")
+    public ResponseEntity<String> generateResumeTex(@PathVariable String username) {
+        String texContent = resumeGeneratorService.generateResumeTex(username);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.TEXT_PLAIN);
+        headers.setContentDispositionFormData("attachment", username + "_resume.tex");
+        headers.setCacheControl("no-cache, no-store, must-revalidate");
+        headers.setPragma("no-cache");
+        headers.setExpires(0);
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(texContent);
+    }
 }

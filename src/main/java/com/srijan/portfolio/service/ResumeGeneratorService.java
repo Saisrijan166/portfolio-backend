@@ -25,6 +25,14 @@ public class ResumeGeneratorService {
 
     private final PortfolioService portfolioService;
 
+    public String generateResumeTex(String username) {
+        PortfolioResponse portfolio = portfolioService.getPortfolioByUsername(username);
+        if (portfolio == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "User not found");
+        }
+        return buildLatex(portfolio);
+    }
+
     public byte[] generateResumePdf(String username) {
         PortfolioResponse portfolio = portfolioService.getPortfolioByUsername(username);
         if (portfolio == null) {
