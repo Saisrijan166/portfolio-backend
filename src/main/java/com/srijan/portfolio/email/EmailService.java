@@ -10,6 +10,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
@@ -138,6 +139,28 @@ public class EmailService {
                 "We noticed a successful sign-in to your account. If this was you, no action is needed.",
                 details,
                 "If this sign-in was not you, change your password immediately and review your account activity.",
+                tenantContext
+        );
+    }
+
+    public void sendThanksgivingEmail(String to, String username, LocalDateTime createdAt, TenantEmailContext tenantContext) {
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put("Username", safe(username));
+        details.put("Email address", safe(to));
+        LocalDateTime actualCreatedAt = createdAt != null ? createdAt : LocalDateTime.now();
+        details.put("Created at", DATE_TIME_FORMATTER.format(actualCreatedAt.atZone(ZoneId.systemDefault())));
+        sendTemplatedEmail(
+                to,
+                "Thank you for creating your account 🎉",
+                "thanksgiving-email",
+                Map.of(
+                        "PREHEADER", "Welcome to your new account",
+                        "TITLE", "Thank you for joining us ✨",
+                        "USERNAME", safe(username),
+                        "MESSAGE", "Your account has been successfully created. We are thrilled to welcome you to our community! Your space is now ready for you.",
+                        "DETAILS_ROWS", emailTemplateService.renderDetailRows(details),
+                        "FOOTER_NOTE", "You can now customize your portfolio and access your developer dashboard using the links below."
+                ),
                 tenantContext
         );
     }

@@ -66,6 +66,7 @@ public class AuthOrchestratorService {
                 .role("ROLE_USER")
                 .isEmailVerified(false)
                 .status(UserStatus.ACTIVE)
+                .newRegistration(true)
                 .build();
 
         User saved = userRepository.save(user);
@@ -180,6 +181,7 @@ public class AuthOrchestratorService {
                     .role("ROLE_USER")
                     .isEmailVerified(emailVerified)
                     .status(UserStatus.ACTIVE)
+                    .newRegistration(true)
                     .build();
             user = userRepository.save(user);
         } else if (emailVerified && !user.isEmailVerified()) {
@@ -201,6 +203,7 @@ public class AuthOrchestratorService {
                 .role("ROLE_USER")
                 .isEmailVerified(emailVerified)
                 .status(UserStatus.ACTIVE)
+                .newRegistration(true)
                 .build();
         User saved = userRepository.save(user);
         authSupportService.enforceTenantAlignment(saved.getUsername());
@@ -282,7 +285,11 @@ public class AuthOrchestratorService {
 
         try {
             com.srijan.portfolio.email.TenantEmailContext context = tenantBrandingResolver.resolve(user.getUsername());
-            emailService.sendLoginAlert(user.getEmail(), method, ipAddress, deviceInfo, context);
+            if (user.isNewRegistration()) {
+                emailService.sendThanksgivingEmail(user.getEmail(), user.getUsername(), user.getCreatedAt(), context);
+            } else {
+                emailService.sendLoginAlert(user.getEmail(), method, ipAddress, deviceInfo, context);
+            }
         } catch (Exception ignored) {
         }
     }

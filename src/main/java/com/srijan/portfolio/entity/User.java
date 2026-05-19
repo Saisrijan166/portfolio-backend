@@ -47,6 +47,10 @@ public class User {
     @Builder.Default
     private List<AuthProvider> authProviders = new ArrayList<>();
 
+    @Transient
+    @Builder.Default
+    private boolean newRegistration = false;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;
