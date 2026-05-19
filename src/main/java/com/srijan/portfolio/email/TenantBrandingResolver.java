@@ -9,7 +9,7 @@ import java.util.Locale;
 @Component
 public class TenantBrandingResolver {
 
-    private static final String DEFAULT_APP_NAME = "PortfolioOS";
+    private static final String DEFAULT_APP_NAME = "Portfoliooss";
     private static final String DEFAULT_PRIMARY_COLOR = "#111827";
     private static final String DEFAULT_ACCENT_COLOR = "#f97316";
 

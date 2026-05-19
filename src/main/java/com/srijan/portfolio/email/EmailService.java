@@ -115,7 +115,7 @@ public class EmailService {
                         "PREHEADER", "New contact message for @" + safe(portfolioUsername),
                         "TITLE", "New contact message received",
                         "INTRO_HTML", emailTemplateService.renderParagraphs(
-                                "A visitor sent you a message through your public PortfolioOS contact app."
+                                "A visitor sent you a message through your public Portfoliooss contact app."
                         ),
                         "CONTACT_SUBJECT", safe(subjectLine),
                         "CONTACT_MESSAGE_HTML", emailTemplateService.renderTextBlock(message),
