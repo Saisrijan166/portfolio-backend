@@ -172,7 +172,7 @@ public class EmailOtpService {
                         "Password reset code",
                         "Use the code below to reset your password and continue securely.",
                         tenantContext
-                );
+                ).join();
                 return;
             }
 
@@ -184,9 +184,9 @@ public class EmailOtpService {
                     "Login verification code",
                     "Use the code below to continue.",
                     tenantContext
-            );
+            ).join();
         } catch (Exception exception) {
-            log.warn("Failed to send OTP email purpose={} to={}", purpose, email, exception);
+            log.warn("Failed to send OTP email purpose={} to={}", purpose, email, exception.getCause() != null ? exception.getCause() : exception);
             throw new ApiException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "OTP_DELIVERY_FAILED",

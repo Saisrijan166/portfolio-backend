@@ -54,9 +54,9 @@ public class ContactEmailService {
                     sanitize(request.getSubject()),
                     sanitize(request.getMessage()),
                     tenantContext
-            );
-        } catch (IllegalStateException exception) {
-            log.warn("Failed to deliver public contact email username={} recipient={}", owner.getUsername(), recipientEmail, exception);
+            ).join();
+        } catch (Exception exception) {
+            log.warn("Failed to deliver public contact email username={} recipient={}", owner.getUsername(), recipientEmail, exception.getCause() != null ? exception.getCause() : exception);
             throw new ApiException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "MAIL_DELIVERY_FAILED",
