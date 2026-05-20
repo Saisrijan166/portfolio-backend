@@ -16,9 +16,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.springframework.scheduling.annotation.Async;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Async
 public class EmailService {
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER =

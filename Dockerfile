@@ -30,5 +30,6 @@ ENTRYPOINT ["java", \
     "-XX:MaxRAMPercentage=75.0", \
     "-XX:+UseG1GC", \
     "-XX:+UseStringDeduplication", \
+    "-Djava.net.preferIPv4Stack=true", \
     "-Dspring.profiles.active=prod", \
     "-jar", "app.jar"]
