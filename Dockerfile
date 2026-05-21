@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install simpleicons LaTeX package from CTAN (not available in Ubuntu apt repos)
 RUN mkdir -p /usr/local/share/texmf/tex/latex/simpleicons && \
     wget -q -O /tmp/simpleicons.zip https://mirrors.ctan.org/fonts/simpleicons.zip && \
+    echo "EXPECTED_SHA256_HERE /tmp/simpleicons.zip" | sha256sum -c - && \
     unzip -o /tmp/simpleicons.zip -d /tmp/simpleicons && \
     cp -r /tmp/simpleicons/simpleicons/* /usr/local/share/texmf/tex/latex/simpleicons/ && \
     texhash && \
