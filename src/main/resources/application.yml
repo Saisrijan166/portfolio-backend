@@ -112,3 +112,7 @@ email:
   batch:
     size: ${EMAIL_BATCH_SIZE:50}
     delay: ${EMAIL_BATCH_DELAY:2000}
+
+brevo:
+  api:
+    key: ${BREVO_API_KEY:}
