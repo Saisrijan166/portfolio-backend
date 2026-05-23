@@ -40,6 +40,7 @@ public class EmailService {
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final EmailTemplateService emailTemplateService;
     private final TenantBrandingResolver tenantBrandingResolver;
+    private final BrevoEmailSender brevoEmailSender;
 
     // -------------------------------------------------------------------------
     // Public @Async entry points — each called from OUTSIDE via Spring proxy
@@ -243,6 +244,13 @@ public class EmailService {
             Map<String, String> variables,
             TenantEmailContext resolved
     ) {
+        String html = emailTemplateService.render(templateName, variables, resolved);
+
+        if (brevoEmailSender.send(to, subject, html, resolved.fromName(), resolved.fromEmail())) {
+            log.info("Email sent via Brevo template={} to={}", templateName, to);
+            return CompletableFuture.completedFuture(null);
+        }
+
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender == null) {
             log.error("Mail delivery is not configured — skipping template={} to={}", templateName, to);
@@ -251,8 +259,6 @@ public class EmailService {
         }
 
         try {
-            String html = emailTemplateService.render(templateName, variables, resolved);
-
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(
                     mimeMessage, true, StandardCharsets.UTF_8.name());
