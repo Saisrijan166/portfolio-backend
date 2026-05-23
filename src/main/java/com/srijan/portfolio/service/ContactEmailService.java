@@ -54,7 +54,7 @@ public class ContactEmailService {
                     sanitize(request.getSubject()),
                     sanitize(request.getMessage()),
                     tenantContext
-            ).join();
+            );
         } catch (Exception exception) {
             log.warn("Failed to deliver public contact email username={} recipient={}", owner.getUsername(), recipientEmail, exception.getCause() != null ? exception.getCause() : exception);
             throw new ApiException(
