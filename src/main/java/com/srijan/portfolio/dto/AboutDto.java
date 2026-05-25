@@ -36,7 +36,7 @@ public class AboutDto {
     private String experienceYears;
 
     @Size(max = 10)
-    private List<@Size(max = 1000) String> about;
+    private List<@Size(max = 2500) String> about;
 
     @Valid
     @Size(max = 6)

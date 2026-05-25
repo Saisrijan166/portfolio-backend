@@ -72,13 +72,14 @@ public class AboutService {
             about.setExperienceYears(sanitize(dto.getExperienceYears()));
         }
 
-        try {
-            if (dto.getAbout() != null) {
-                about.setAboutContent(objectMapper.writeValueAsString(sanitizeList(dto.getAbout())));
+        if (dto.getAbout() != null) {
+            List<String> sanitizedAbout = sanitizeList(dto.getAbout());
+            try {
+                about.setAboutContent(objectMapper.writeValueAsString(sanitizedAbout));
+            } catch (Exception exception) {
+                log.error("Failed to serialize about data", exception);
+                throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "ABOUT_SERIALIZATION_FAILED", "Failed to serialize about data");
             }
-        } catch (Exception exception) {
-            log.error("Failed to serialize about data", exception);
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "ABOUT_SERIALIZATION_FAILED", "Failed to serialize about data");
         }
 
         if (dto.getPrinciples() != null) {
