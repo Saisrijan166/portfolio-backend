@@ -50,6 +50,9 @@ public class PublicPortfolioController {
             @Pattern(regexp = USERNAME_PATTERN, message = "Username format is invalid")
             String username) {
         PortfolioBootstrapResponse data = portfolioService.getPortfolioBootstrap(username);
+        if (data != null) {
+            data.setPortfolioRating(feedbackService.getPublicPortfolioAverageRating(username));
+        }
         return data == null ? cachedUserNotFound() : cachedSuccess(data, "Portfolio loaded");
     }
 

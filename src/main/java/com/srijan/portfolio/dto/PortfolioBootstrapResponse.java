@@ -18,4 +18,5 @@ public class PortfolioBootstrapResponse {
     private String lastUpdated;
     private Long projectCount;
     private Long experienceCount;
+    private Double portfolioRating;
 }

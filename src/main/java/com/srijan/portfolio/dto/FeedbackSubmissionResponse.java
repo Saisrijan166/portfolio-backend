@@ -19,4 +19,5 @@ public class FeedbackSubmissionResponse {
     private boolean messageStored;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Double portfolioRating;
 }

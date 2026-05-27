@@ -80,7 +80,10 @@ public class FeedbackService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provide at least a rating or a message");
         }
 
-        return toSubmissionResponse(responseTarget, messageFeedback == null && ratingUpdatedExisting);
+        FeedbackSubmissionResponse response = toSubmissionResponse(responseTarget, messageFeedback == null && ratingUpdatedExisting);
+        Double avg = portfolioFeedbackRepository.findAverageRatingByOwnerId(owner.getId());
+        response.setPortfolioRating(avg == null ? 0D : roundAverage(avg));
+        return response;
     }
 
     @Transactional
@@ -153,6 +156,13 @@ public class FeedbackService {
                 .feedbackCount(count)
                 .averageRating(averageRating == null ? 0D : roundAverage(averageRating))
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public Double getPublicPortfolioAverageRating(String username) {
+        User owner = findUserByUsername(username);
+        Double averageRating = portfolioFeedbackRepository.findAverageRatingByOwnerId(owner.getId());
+        return averageRating == null ? 0D : roundAverage(averageRating);
     }
 
     @Transactional(readOnly = true)
