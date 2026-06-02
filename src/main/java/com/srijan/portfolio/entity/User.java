@@ -43,6 +43,10 @@ public class User {
     @Builder.Default
     private UserStatus status = UserStatus.ACTIVE;
 
+    @Column(name = "active_template", nullable = false, length = 50)
+    @Builder.Default
+    private String activeTemplate = "linux-os";
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<AuthProvider> authProviders = new ArrayList<>();

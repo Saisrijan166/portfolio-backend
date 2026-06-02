@@ -134,6 +134,7 @@ public class PortfolioService {
 
         return PortfolioBootstrapResponse.builder()
                 .username(user.getUsername())
+                .template(user.getActiveTemplate())
                 .profile(mapPortfolioIdentity(profile, about))
                 .about(mapPortfolioAboutSummary(about))
                 .widgets(mapDesktopWidgets(widgets))

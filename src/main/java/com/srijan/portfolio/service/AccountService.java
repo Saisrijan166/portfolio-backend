@@ -158,4 +158,21 @@ public class AccountService {
         } catch (Exception ignored) {
         }
     }
+    @Transactional(readOnly = true)
+    public com.srijan.portfolio.dto.TemplateDto getTemplate(String username) {
+        User user = findUserByUsername(username);
+        return com.srijan.portfolio.dto.TemplateDto.builder()
+                .template(user.getActiveTemplate())
+                .build();
+    }
+
+    @Transactional
+    public com.srijan.portfolio.dto.TemplateDto updateTemplate(String username, com.srijan.portfolio.dto.TemplateUpdateRequest request) {
+        User user = findUserByUsername(username);
+        user.setActiveTemplate(request.getTemplate());
+        User saved = userRepository.save(user);
+        return com.srijan.portfolio.dto.TemplateDto.builder()
+                .template(saved.getActiveTemplate())
+                .build();
+    }
 }

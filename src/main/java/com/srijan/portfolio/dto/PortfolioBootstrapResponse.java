@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PortfolioBootstrapResponse {
     private String username;
+    private String template;
     private PortfolioIdentityDto profile;
     private PortfolioAboutSummaryDto about;
     private DesktopWidgetsDto widgets;
