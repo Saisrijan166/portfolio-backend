@@ -15,7 +15,7 @@ public class TemplateUpdateRequest {
 
     @NotBlank(message = "Template value is required")
     @Pattern(
-            regexp = "^(linux-os|noir-terminal|brutalist-magazine|spatial-3d-card|editorial-scroll|glassmorphic-zen)$",
+            regexp = "^(linux-os|noir-terminal|brutalist-magazine|spatial-3d-card|editorial-scroll|glassmorphic-zen|chapterbook|wormhole-path|orbital-system|constellation-field|darkroom-reveal)$",
             message = "Invalid template selection"
     )
     private String template;
