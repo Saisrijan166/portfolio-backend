@@ -124,7 +124,7 @@ public class PortfolioService {
         AppearanceConfig appearance = appearanceConfigRepository.findByUserId(userId).orElse(null);
         Resume resume = resumeRepository.findByUserId(userId).orElse(null);
         Contact contact = contactRepository.findByUserId(userId).orElse(null);
-        List<Project> projects = projectRepository.findByUserId(userId);
+        List<Project> projects = projectRepository.findByUserIdOrderByIdDesc(userId);
         List<Experience> experiences = experienceRepository.findByUserId(userId);
         List<CertificationAchievement> certificationAchievements = certificationAchievementRepository.findByUserIdOrderByIdAsc(userId);
         List<Skill> skills = skillRepository.findByUserId(userId);
@@ -176,7 +176,7 @@ public class PortfolioService {
         if (!publicUserExists(username)) {
             return null;
         }
-        return projectRepository.findByUserUsername(sanitize(username))
+        return projectRepository.findByUserUsernameOrderByIdDesc(sanitize(username))
                 .stream().map(this::mapProject).collect(Collectors.toList());
     }
 
@@ -296,7 +296,7 @@ public class PortfolioService {
 
     public List<ProjectDto> getMyProjects(String username) {
         findUserByUsername(username);
-        return projectRepository.findByUserUsername(username)
+        return projectRepository.findByUserUsernameOrderByIdDesc(username)
                 .stream().map(this::mapProject).collect(Collectors.toList());
     }
 
@@ -669,7 +669,7 @@ public class PortfolioService {
 
         Profile profile = profileRepository.findByUserId(userId).orElse(null);
         About about = readAboutSafely(userId);
-        List<Project> projects = projectRepository.findByUserId(userId);
+        List<Project> projects = projectRepository.findByUserIdOrderByIdDesc(userId);
         List<Experience> experiences = experienceRepository.findByUserId(userId);
         List<CertificationAchievement> certificationAchievements = certificationAchievementRepository.findByUserIdOrderByIdAsc(userId);
         List<Skill> skills = skillRepository.findByUserId(userId);
@@ -701,7 +701,7 @@ public class PortfolioService {
     @Transactional
     public List<ProjectDto> updateProjects(String username, List<ProjectDto> projectDtos) {
         User user = findUserByUsername(username);
-        List<Project> existing = projectRepository.findByUserId(user.getId());
+        List<Project> existing = projectRepository.findByUserIdOrderByIdDesc(user.getId());
         projectRepository.deleteAll(existing);
 
         List<Project> updated = projectDtos.stream()
@@ -834,7 +834,7 @@ public class PortfolioService {
     private int deleteResumeAiSection(User user, String section) {
         return switch (section) {
             case "projects" -> {
-                List<Project> existing = projectRepository.findByUserId(user.getId());
+                List<Project> existing = projectRepository.findByUserIdOrderByIdDesc(user.getId());
                 int count = existing.size();
                 projectRepository.deleteAll(existing);
                 yield count;
@@ -949,7 +949,7 @@ public class PortfolioService {
     private int replaceProjects(User user, List<ProjectDto> dtos) {
         List<ProjectDto> payloads = dtos == null ? List.of() : dtos;
         payloads.forEach(this::validateBulkPayload);
-        projectRepository.deleteAll(projectRepository.findByUserId(user.getId()));
+        projectRepository.deleteAll(projectRepository.findByUserIdOrderByIdDesc(user.getId()));
         List<Project> entities = payloads.stream()
                 .map(dto -> buildProject(new Project(), user, dto))
                 .collect(Collectors.toList());

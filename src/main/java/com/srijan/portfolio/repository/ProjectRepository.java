@@ -8,9 +8,9 @@ import java.util.List;
 
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, Long> {
-    List<Project> findByUserId(Long userId);
+    List<Project> findByUserIdOrderByIdDesc(Long userId);
 
-    List<Project> findByUserUsername(String username);
+    List<Project> findByUserUsernameOrderByIdDesc(String username);
 
     long countByUserId(Long userId);
 
