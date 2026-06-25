@@ -119,3 +119,4 @@ brevo:
 
 superadmin:
   usernames: ${SUPERADMIN_USERNAMES:}
+  pin: ${SUPERADMIN_PIN:}

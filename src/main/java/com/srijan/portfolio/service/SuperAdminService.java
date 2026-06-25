@@ -44,6 +44,9 @@ public class SuperAdminService {
     @Value("${superadmin.usernames:}")
     private String superadminUsernames;
 
+    @Value("${superadmin.pin:}")
+    private String superadminPin;
+
     // -------------------------------------------------------------------------
     // Security: server-side superadmin validation
     // -------------------------------------------------------------------------
@@ -57,6 +60,22 @@ public class SuperAdminService {
         if (!allowed.contains(username.toLowerCase(Locale.ROOT))) {
             log.warn("Superadmin access denied for username: {}", username);
             throw new ForbiddenException("SUPERADMIN_REQUIRED", "Superadmin access required");
+        }
+    }
+
+    /**
+     * Full verification: username allowlist + superadmin PIN.
+     * Used by the /verify endpoint as the gate check.
+     */
+    public void validateSuperAdminWithPin(String username, String pin) {
+        validateSuperAdmin(username);
+
+        if (superadminPin == null || superadminPin.isBlank()) {
+            throw new ForbiddenException("SUPERADMIN_PIN_REQUIRED", "Superadmin PIN is not configured on the server");
+        }
+
+        if (pin == null || pin.isBlank() || !superadminPin.equals(pin.trim())) {
+            throw new ForbiddenException("INVALID_SUPERADMIN_PIN", "Invalid superadmin PIN");
         }
     }
 

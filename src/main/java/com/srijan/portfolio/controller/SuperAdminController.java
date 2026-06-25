@@ -36,9 +36,13 @@ public class SuperAdminController {
     // Verify superadmin access (used by frontend for gate check)
     // -------------------------------------------------------------------------
 
-    @GetMapping("/verify")
-    public ResponseEntity<ApiResponse<Map<String, Boolean>>> verifySuperAdmin(Authentication auth) {
-        superAdminService.validateSuperAdmin(auth.getName());
+    @PostMapping("/verify")
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> verifySuperAdmin(
+            Authentication auth,
+            @RequestBody Map<String, String> body
+    ) {
+        String pin = body != null ? body.get("pin") : null;
+        superAdminService.validateSuperAdminWithPin(auth.getName(), pin);
         return ApiResponses.ok(Map.of("superadmin", true), "Superadmin verified");
     }
 
