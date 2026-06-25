@@ -116,3 +116,6 @@ email:
 brevo:
   api:
     key: ${BREVO_API_KEY:}
+
+superadmin:
+  usernames: ${SUPERADMIN_USERNAMES:}

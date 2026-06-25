@@ -46,6 +46,15 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.FORBIDDEN, "ACCOUNT_SUSPENDED", "Account is suspended", false);
     }
 
+    @ExceptionHandler(org.springframework.security.authentication.InternalAuthenticationServiceException.class)
+    public ResponseEntity<ApiErrorResponse> handleInternalAuth(org.springframework.security.authentication.InternalAuthenticationServiceException ex) {
+        if (ex.getCause() instanceof DisabledException) {
+            return buildErrorResponse(HttpStatus.FORBIDDEN, "ACCOUNT_SUSPENDED", "Account is suspended", false);
+        }
+
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "An unexpected error occurred. Please try again later.", true);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()

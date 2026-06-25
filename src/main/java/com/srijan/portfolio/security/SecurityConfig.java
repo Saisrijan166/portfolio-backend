@@ -75,6 +75,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/cron/weekly-email").permitAll()
                         .requestMatchers("/api/admin/profile/**", "/api/admin/about/**").authenticated()
+                        .requestMatchers("/api/superadmin/**").authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/me/**").hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated()

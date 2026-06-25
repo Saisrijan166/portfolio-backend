@@ -200,6 +200,33 @@ public class EmailService {
         );
     }
 
+    @Async
+    public CompletableFuture<Void> sendAnnouncementEmail(
+            String to,
+            String subject,
+            String bodyHtml,
+            TenantEmailContext tenantContext
+    ) {
+        TenantEmailContext resolved = resolve(tenantContext);
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put("Notice Type", "General Announcement");
+        details.put("Date", DATE_TIME_FORMATTER.format(java.time.Instant.now()));
+
+        return sendTemplatedEmailInternal(
+                to,
+                subject,
+                "notification-email",
+                Map.of(
+                        "PREHEADER",    subject,
+                        "TITLE",        subject,
+                        "INTRO_HTML",   bodyHtml,
+                        "DETAILS_ROWS", emailTemplateService.renderDetailRows(details),
+                        "SECURITY_NOTE", "This is an automated administrative notification. Please do not reply."
+                ),
+                resolved
+        );
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers — plain Java calls, no proxy involvement
     // -------------------------------------------------------------------------
