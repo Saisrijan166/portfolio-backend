@@ -156,7 +156,7 @@ public class ResumeParseService {
         }
 
         String rawJson = aiOrchestratorService.generateJson(
-                "You improve resume sections while preserving facts.",
+                resumePromptFactory.buildSectionRegenerationSystemPrompt(),
                 resumePromptFactory.buildSectionRegenerationPrompt(request.getSections(), request.getExistingResume()),
                 this::isJsonObject
         );

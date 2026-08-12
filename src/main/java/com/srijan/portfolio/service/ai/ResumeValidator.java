@@ -9,12 +9,18 @@ import java.util.List;
 @Component
 public class ResumeValidator {
 
+    private final ResumeLimitEnforcer resumeLimitEnforcer;
+
+    public ResumeValidator(ResumeLimitEnforcer resumeLimitEnforcer) {
+        this.resumeLimitEnforcer = resumeLimitEnforcer;
+    }
+
     public ResumeParseResponseDto clean(ResumeParseResponseDto resume) {
         if (resume == null) {
             return null;
         }
 
-        return ResumeParseResponseDto.builder()
+        ResumeParseResponseDto normalized = ResumeParseResponseDto.builder()
                 .name(cleanString(resume.getName()))
                 .email(cleanString(resume.getEmail()))
                 .phone(cleanString(resume.getPhone()))
@@ -36,6 +42,10 @@ public class ResumeValidator {
                 .principles(resume.getPrinciples() == null ? new ArrayList<>() : new ArrayList<>(resume.getPrinciples()))
                 .provider(cleanString(resume.getProvider()))
                 .build();
+
+        // Every AI path (fresh parse, cache hit, section regeneration, internal parser fallback)
+        // funnels through clean(), so this is where the admin UI / DTO limits are guaranteed.
+        return resumeLimitEnforcer.enforce(normalized);
     }
 
     public boolean isValid(ResumeParseResponseDto resume) {
