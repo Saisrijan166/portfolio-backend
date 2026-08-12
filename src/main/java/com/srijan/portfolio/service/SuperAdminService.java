@@ -6,6 +6,7 @@ import com.srijan.portfolio.email.TenantBrandingResolver;
 import com.srijan.portfolio.email.TenantEmailContext;
 import com.srijan.portfolio.entity.User;
 import com.srijan.portfolio.entity.UserStatus;
+import com.srijan.portfolio.exception.ApiException;
 import com.srijan.portfolio.exception.ForbiddenException;
 import com.srijan.portfolio.exception.ResourceNotFoundException;
 import com.srijan.portfolio.repository.AuthProviderRepository;
@@ -13,6 +14,7 @@ import com.srijan.portfolio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,8 +22,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -47,6 +55,15 @@ public class SuperAdminService {
     @Value("${superadmin.pin:}")
     private String superadminPin;
 
+    @Value("${superadmin.pin-max-attempts:5}")
+    private int pinMaxAttempts;
+
+    @Value("${superadmin.pin-lockout-minutes:15}")
+    private int pinLockoutMinutes;
+
+    /** Failed PIN attempts per superadmin username. Bounded by the size of the allowlist. */
+    private final Map<String, PinAttempts> pinAttempts = new ConcurrentHashMap<>();
+
     // -------------------------------------------------------------------------
     // Security: server-side superadmin validation
     // -------------------------------------------------------------------------
@@ -66,6 +83,11 @@ public class SuperAdminService {
     /**
      * Full verification: username allowlist + superadmin PIN.
      * Used by the /verify endpoint as the gate check.
+     *
+     * <p>The PIN is compared in constant time and guessing is capped per account: after
+     * {@code superadmin.pin-max-attempts} consecutive failures the account is locked out for
+     * {@code superadmin.pin-lockout-minutes}. The per-IP rate limit on {@code /api/superadmin/verify}
+     * bounds the same attack from the network side; this bounds it per identity.
      */
     public void validateSuperAdminWithPin(String username, String pin) {
         validateSuperAdmin(username);
@@ -74,9 +96,58 @@ public class SuperAdminService {
             throw new ForbiddenException("SUPERADMIN_PIN_REQUIRED", "Superadmin PIN is not configured on the server");
         }
 
-        if (pin == null || pin.isBlank() || !superadminPin.equals(pin.trim())) {
+        String attemptKey = username.toLowerCase(Locale.ROOT);
+        assertNotLockedOut(attemptKey);
+
+        if (pin == null || pin.isBlank() || !matchesPin(pin.trim())) {
+            registerFailedPinAttempt(attemptKey);
             throw new ForbiddenException("INVALID_SUPERADMIN_PIN", "Invalid superadmin PIN");
         }
+
+        pinAttempts.remove(attemptKey);
+    }
+
+    private boolean matchesPin(String candidate) {
+        return MessageDigest.isEqual(
+                candidate.getBytes(StandardCharsets.UTF_8),
+                superadminPin.getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    private void assertNotLockedOut(String attemptKey) {
+        PinAttempts attempts = pinAttempts.get(attemptKey);
+        if (attempts == null) {
+            return;
+        }
+
+        if (attempts.lockedUntil != null && attempts.lockedUntil.isAfter(Instant.now())) {
+            long minutes = Math.max(Duration.between(Instant.now(), attempts.lockedUntil).toMinutes() + 1, 1);
+            log.warn("Superadmin PIN locked out for username: {}", attemptKey);
+            throw new ApiException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    "SUPERADMIN_PIN_LOCKED",
+                    "Too many incorrect PIN attempts. Try again in " + minutes + " minute(s)."
+            );
+        }
+
+        if (attempts.lockedUntil != null) {
+            pinAttempts.remove(attemptKey);
+        }
+    }
+
+    private void registerFailedPinAttempt(String attemptKey) {
+        PinAttempts attempts = pinAttempts.computeIfAbsent(attemptKey, ignored -> new PinAttempts());
+        int failures = attempts.failures.incrementAndGet();
+        if (failures >= pinMaxAttempts) {
+            attempts.lockedUntil = Instant.now().plus(Duration.ofMinutes(pinLockoutMinutes));
+            attempts.failures.set(0);
+            log.warn("Superadmin PIN lockout triggered for username: {}", attemptKey);
+        }
+    }
+
+    private static final class PinAttempts {
+        private final AtomicInteger failures = new AtomicInteger();
+        private volatile Instant lockedUntil;
     }
 
     private Set<String> parseSuperadminUsernames() {

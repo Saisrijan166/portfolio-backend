@@ -7,39 +7,44 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Per-IP request rate limiting for every API endpoint.
+ *
+ * <p>Two counters are applied to each request: the endpoint's own limit (see {@link RateLimitPolicy})
+ * and an aggregate ceiling across all endpoints, so spreading traffic over many paths no longer
+ * multiplies the effective throughput.
+ *
+ * <p>Registered explicitly in {@code SecurityConfig} ahead of every other custom filter — including
+ * the cron API key check — so unauthenticated credential and key guessing is counted.
+ */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class RequestRateLimitingFilter extends OncePerRequestFilter {
 
     private static final Duration WINDOW = Duration.ofMinutes(1);
-    private static final int AUTH_LIMIT = 30;
-    private static final int PUBLIC_FEEDBACK_LIMIT = 15;
-    private static final int ADMIN_FEEDBACK_LIMIT = 40;
-    private static final int PUBLIC_LIMIT = 200;
-    private static final int DEFAULT_LIMIT = 300;
+    private static final int MAX_TRACKED_KEYS = 50_000;
+    private static final int EVICTION_INTERVAL = 500;
 
     private final ObjectMapper objectMapper;
-    private final Map<String, WindowCounter> counters = new ConcurrentHashMap<>();
+    private final RateLimitPolicy policy;
 
-    @Value("${security.trust-proxy-headers:false}")
-    private boolean trustProxyHeaders;
+    private final FixedWindowRateLimiter limiter =
+            new FixedWindowRateLimiter(WINDOW, MAX_TRACKED_KEYS, EVICTION_INTERVAL);
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return "OPTIONS".equalsIgnoreCase(request.getMethod());
+        return "OPTIONS".equalsIgnoreCase(request.getMethod()) || policy.isExempt(request.getRequestURI());
     }
 
     @Override
@@ -48,75 +53,55 @@ public class RequestRateLimitingFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-        String path = request.getRequestURI();
-        int limit = resolveLimit(path);
-        String key = clientKey(request) + ":" + normalizePath(path);
+        FixedWindowRateLimiter.Hit hit;
+        try {
+            hit = evaluate(request);
+        } catch (RuntimeException exception) {
+            // Rate limiting must never be the reason a request fails.
+            log.warn("Rate limiting skipped for path={} due to an internal error", request.getRequestURI(), exception);
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-        WindowCounter counter = counters.compute(key, (ignored, existing) -> existing == null || existing.isExpired()
-                ? new WindowCounter()
-                : existing);
+        RateLimitHeaders.apply(response, hit);
 
-        if (counter.incrementAndGet() > limit) {
-            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            objectMapper.writeValue(response.getWriter(), ApiResponses.error(
-                    "RATE_LIMITED",
-                    "Too many requests. Please try again shortly."
-            ));
+        if (hit.exceeded()) {
+            log.warn("Rate limit exceeded ip={} method={} path={}",
+                    ClientIpFilter.resolve(request), request.getMethod(), request.getRequestURI());
+            writeTooManyRequests(response);
             return;
         }
 
         filterChain.doFilter(request, response);
     }
 
-    private int resolveLimit(String path) {
-        if (path.startsWith("/api/auth/")) {
-            return AUTH_LIMIT;
+    /**
+     * Counts the request against both the endpoint rule and the global per-IP ceiling, and returns
+     * whichever of the two is closest to its limit so the reported headers are the binding ones.
+     */
+    private FixedWindowRateLimiter.Hit evaluate(HttpServletRequest request) {
+        String clientIp = ClientIpFilter.resolve(request);
+        RateLimitPolicy.Rule rule = policy.resolve(request.getMethod(), request.getRequestURI());
+
+        FixedWindowRateLimiter.Hit ruleHit = limiter.hit(clientIp + "|" + rule.bucket(), rule.limit());
+        FixedWindowRateLimiter.Hit globalHit = limiter.hit(clientIp + "|*", policy.globalLimit());
+
+        if (globalHit.exceeded() && !ruleHit.exceeded()) {
+            return globalHit;
         }
-        if (isPublicFeedbackPath(path)) {
-            return PUBLIC_FEEDBACK_LIMIT;
+        if (ruleHit.exceeded()) {
+            return ruleHit;
         }
-        if (path.startsWith("/api/me/feedback")) {
-            return ADMIN_FEEDBACK_LIMIT;
-        }
-        if (path.startsWith("/api/public/")) {
-            return PUBLIC_LIMIT;
-        }
-        return DEFAULT_LIMIT;
+        return ruleHit.remaining() <= globalHit.remaining() ? ruleHit : globalHit;
     }
 
-    private String normalizePath(String path) {
-        if (isPublicFeedbackPath(path)) {
-            if (path.endsWith("/feedback/platform")) {
-                return "/api/public/portfolio/{username}/feedback/platform";
-            }
-            return "/api/public/portfolio/{username}/feedback";
-        }
-        return path;
-    }
-
-    private boolean isPublicFeedbackPath(String path) {
-        return path.matches("^/api/public/portfolio/[^/]+/feedback(?:/platform)?$");
-    }
-
-    private String clientKey(HttpServletRequest request) {
-        String forwardedFor = trustProxyHeaders ? request.getHeader("X-Forwarded-For") : null;
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
-
-    private static final class WindowCounter {
-        private final Instant startedAt = Instant.now();
-        private final AtomicInteger count = new AtomicInteger(0);
-
-        boolean isExpired() {
-            return startedAt.plus(WINDOW).isBefore(Instant.now());
-        }
-
-        int incrementAndGet() {
-            return count.incrementAndGet();
-        }
+    private void writeTooManyRequests(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        objectMapper.writeValue(response.getWriter(), ApiResponses.error(
+                "RATE_LIMITED",
+                "Too many requests. Please try again shortly."
+        ));
     }
 }

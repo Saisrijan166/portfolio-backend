@@ -94,6 +94,36 @@ feedback:
 
 security:
   trust-proxy-headers: ${SECURITY_TRUST_PROXY_HEADERS:true}
+  # Number of reverse proxies in front of the app. The client IP is taken this many hops from the
+  # right of X-Forwarded-For; everything to the left of it is caller-supplied and untrusted.
+  # Render alone = 1. Add one for each additional trusted proxy (e.g. Cloudflare in front of Render).
+  trusted-proxy-count: ${SECURITY_TRUSTED_PROXY_COUNT:1}
+
+  # Requests per client IP per minute. Tune via env without a code change.
+  rate-limit:
+    global: ${RATE_LIMIT_GLOBAL:600}
+    auth-credentials: ${RATE_LIMIT_AUTH_CREDENTIALS:15}
+    auth-otp-send: ${RATE_LIMIT_AUTH_OTP_SEND:5}
+    auth-otp-verify: ${RATE_LIMIT_AUTH_OTP_VERIFY:10}
+    auth-session: ${RATE_LIMIT_AUTH_SESSION:30}
+    superadmin-verify: ${RATE_LIMIT_SUPERADMIN_VERIFY:5}
+    superadmin-bulk-email: ${RATE_LIMIT_SUPERADMIN_BULK_EMAIL:3}
+    superadmin-bulk: ${RATE_LIMIT_SUPERADMIN_BULK:10}
+    superadmin: ${RATE_LIMIT_SUPERADMIN:60}
+    cron: ${RATE_LIMIT_CRON:12}
+    public-contact-message: ${RATE_LIMIT_PUBLIC_CONTACT_MESSAGE:5}
+    public-feedback: ${RATE_LIMIT_PUBLIC_FEEDBACK:15}
+    public-resume-generate: ${RATE_LIMIT_PUBLIC_RESUME_GENERATE:10}
+    public-read: ${RATE_LIMIT_PUBLIC_READ:200}
+    admin-feedback: ${RATE_LIMIT_ADMIN_FEEDBACK:40}
+    account-username-check: ${RATE_LIMIT_ACCOUNT_USERNAME_CHECK:30}
+    account-security: ${RATE_LIMIT_ACCOUNT_SECURITY:10}
+    resume-bulk: ${RATE_LIMIT_RESUME_BULK:20}
+    resume-job-poll: ${RATE_LIMIT_RESUME_JOB_POLL:120}
+    keep-warm: ${RATE_LIMIT_KEEP_WARM:60}
+    default: ${RATE_LIMIT_DEFAULT:300}
+    ai-per-ip: ${RATE_LIMIT_AI_PER_IP:12}
+    ai-per-user: ${RATE_LIMIT_AI_PER_USER:8}
 
 management:
   endpoints:
@@ -120,3 +150,5 @@ brevo:
 superadmin:
   usernames: ${SUPERADMIN_USERNAMES:}
   pin: ${SUPERADMIN_PIN:}
+  pin-max-attempts: ${SUPERADMIN_PIN_MAX_ATTEMPTS:5}
+  pin-lockout-minutes: ${SUPERADMIN_PIN_LOCKOUT_MINUTES:15}

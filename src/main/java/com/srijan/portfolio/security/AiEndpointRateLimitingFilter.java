@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,24 +18,37 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Extra throttling for the endpoints that call out to an AI provider, on top of the generic
+ * per-endpoint limits in {@link RequestRateLimitingFilter}. These requests cost real money and take
+ * seconds of a small thread pool, so they get both a per-IP and a per-identity budget.
+ *
+ * <p>Registered after {@code JwtAuthenticationFilter} in {@code SecurityConfig} so the authenticated
+ * principal is available; unauthenticated callers are bucketed per IP rather than sharing one
+ * global anonymous bucket.
+ */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AiEndpointRateLimitingFilter extends OncePerRequestFilter {
 
     private static final Duration WINDOW = Duration.ofMinutes(1);
-    private static final int IP_LIMIT = 12;
-    private static final int USER_LIMIT = 8;
+    private static final int MAX_TRACKED_KEYS = 20_000;
+    private static final int EVICTION_INTERVAL = 200;
 
     private final ObjectMapper objectMapper;
-    private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
-    @Value("${security.trust-proxy-headers:false}")
-    private boolean trustProxyHeaders;
+    @Value("${security.rate-limit.ai-per-ip:12}")
+    private int ipLimit;
+
+    @Value("${security.rate-limit.ai-per-user:8}")
+    private int userLimit;
+
+    private final FixedWindowRateLimiter limiter =
+            new FixedWindowRateLimiter(WINDOW, MAX_TRACKED_KEYS, EVICTION_INTERVAL);
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -49,11 +63,22 @@ public class AiEndpointRateLimitingFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        evictExpiredBuckets();
+        FixedWindowRateLimiter.Hit hit;
+        try {
+            hit = evaluate(request);
+        } catch (RuntimeException exception) {
+            log.warn("AI rate limiting skipped for path={} due to an internal error", request.getRequestURI(), exception);
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-        if (!consume("ip:" + resolveClientIp(request), IP_LIMIT) || !consume("user:" + resolveUsername(), USER_LIMIT)) {
+        RateLimitHeaders.apply(response, hit);
+
+        if (hit.exceeded()) {
+            log.warn("AI rate limit exceeded ip={} path={}", ClientIpFilter.resolve(request), request.getRequestURI());
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             objectMapper.writeValue(response.getWriter(), ApiResponses.error(
                     "AI_RATE_LIMITED",
                     "AI request limit exceeded. Please wait a minute and try again."
@@ -64,14 +89,26 @@ public class AiEndpointRateLimitingFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private boolean consume(String key, int capacity) {
-        Bucket bucket = buckets.compute(key, (ignored, existing) -> existing == null || existing.isExpired()
-                ? new Bucket(capacity)
-                : existing);
-        return bucket.consumeIfAvailable();
+    private FixedWindowRateLimiter.Hit evaluate(HttpServletRequest request) {
+        String clientIp = ClientIpFilter.resolve(request);
+
+        FixedWindowRateLimiter.Hit ipHit = limiter.hit("ai-ip:" + clientIp, ipLimit);
+        FixedWindowRateLimiter.Hit identityHit = limiter.hit("ai-user:" + resolveIdentity(clientIp), userLimit);
+
+        if (identityHit.exceeded()) {
+            return identityHit;
+        }
+        if (ipHit.exceeded()) {
+            return ipHit;
+        }
+        return identityHit.remaining() <= ipHit.remaining() ? identityHit : ipHit;
     }
 
-    private String resolveUsername() {
+    /**
+     * The authenticated username, or an IP-scoped anonymous identity. Bucketing anonymous callers
+     * together would let a single visitor exhaust the public summarize endpoint for everyone.
+     */
+    private String resolveIdentity(String clientIp) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null
                 || !authentication.isAuthenticated()
@@ -79,42 +116,8 @@ public class AiEndpointRateLimitingFilter extends OncePerRequestFilter {
                 || authentication.getName() == null
                 || authentication.getName().isBlank()
                 || "anonymousUser".equalsIgnoreCase(authentication.getName())) {
-            return "anonymous";
+            return "anonymous@" + clientIp;
         }
         return authentication.getName();
-    }
-
-    private String resolveClientIp(HttpServletRequest request) {
-        String forwardedFor = trustProxyHeaders ? request.getHeader("X-Forwarded-For") : null;
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            String[] ips = forwardedFor.split(",");
-            return ips[ips.length - 1].trim();
-        }
-        return request.getRemoteAddr();
-    }
-
-    private void evictExpiredBuckets() {
-        buckets.entrySet().removeIf(entry -> entry.getValue().isExpired());
-    }
-
-    private static final class Bucket {
-        private final Instant createdAt = Instant.now();
-        private int remainingTokens;
-
-        private Bucket(int remainingTokens) {
-            this.remainingTokens = remainingTokens;
-        }
-
-        private synchronized boolean consumeIfAvailable() {
-            if (remainingTokens <= 0) {
-                return false;
-            }
-            remainingTokens -= 1;
-            return true;
-        }
-
-        private boolean isExpired() {
-            return createdAt.plus(WINDOW).isBefore(Instant.now());
-        }
     }
 }

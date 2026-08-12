@@ -21,6 +21,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -91,12 +92,21 @@ public class SecurityConfig {
                         .failureHandler(oauth2AuthenticationFailureHandler)
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(securityHeaderFilter, ApiKeyAuthenticationFilter.class)
-                .addFilterBefore(requestLoggingFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(requestRateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(tenantFilter, UsernamePasswordAuthenticationFilter.class)
+                // Filter order. Everything below runs after Spring Security's CorsFilter, so 429 and
+                // 403 responses carry CORS headers and the browser can actually read them, and before
+                // the OAuth2 login filters, so the tenant context is set for the OAuth success handler.
+                // Filters anchored to the same reference class keep their registration order.
+                // Auto-registration into the servlet container chain is disabled in
+                // FilterRegistrationConfig, so this is the only place that decides ordering.
+                .addFilterBefore(requestLoggingFilter, CsrfFilter.class)
+                // Rate limiting sits ahead of the API key and CSRF-header checks so that rejected
+                // requests — cron key guessing included — are still counted against the caller.
+                .addFilterBefore(requestRateLimitingFilter, CsrfFilter.class)
+                .addFilterBefore(securityHeaderFilter, CsrfFilter.class)
+                .addFilterBefore(apiKeyAuthenticationFilter, CsrfFilter.class)
+                .addFilterBefore(tenantFilter, CsrfFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                // Must stay after JWT authentication so the per-user AI budget sees the principal.
                 .addFilterAfter(aiEndpointRateLimitingFilter, JwtAuthenticationFilter.class)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint(jsonAuthenticationEntryPoint)
@@ -113,7 +123,13 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(resolveAllowedOriginPatterns());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "X-Visitor-Token", "X-API-Key"));
-        config.setExposedHeaders(List.of("Authorization"));
+        config.setExposedHeaders(List.of(
+                "Authorization",
+                "Retry-After",
+                "X-RateLimit-Limit",
+                "X-RateLimit-Remaining",
+                "X-RateLimit-Reset"
+        ));
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
