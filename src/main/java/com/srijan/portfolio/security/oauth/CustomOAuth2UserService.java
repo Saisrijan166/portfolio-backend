@@ -2,6 +2,7 @@ package com.srijan.portfolio.security.oauth;
 
 import com.srijan.portfolio.entity.AuthProviderType;
 import com.srijan.portfolio.entity.User;
+import com.srijan.portfolio.exception.UserFacingErrors;
 import com.srijan.portfolio.service.AuthService;
 import com.srijan.portfolio.service.AuthSupportService;
 import lombok.RequiredArgsConstructor;
@@ -53,9 +54,11 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         } catch (OAuth2AuthenticationException exception) {
             throw exception;
         } catch (Exception exception) {
+            // The message on this exception is surfaced on the sign-in page, so it must be one of
+            // ours. The cause is retained for the logs.
             throw new OAuth2AuthenticationException(
                     new OAuth2Error("oauth_user_resolution_failed"),
-                    exception.getMessage(),
+                    UserFacingErrors.messageFor(exception),
                     exception
             );
         }

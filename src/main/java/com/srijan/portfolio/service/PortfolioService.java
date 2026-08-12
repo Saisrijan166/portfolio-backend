@@ -1019,13 +1019,12 @@ public class PortfolioService {
             if (current instanceof ResourceNotFoundException resourceNotFoundException) {
                 return resourceNotFoundException.getMessage();
             }
-            if (current.getMessage() != null && !current.getMessage().isBlank()) {
-                return current.getMessage();
-            }
             current = current.getCause();
         }
 
-        return "Resume AI bulk operation failed.";
+        // Only our own exception messages above are safe to show; anything else would surface a
+        // framework or driver diagnostic in the UI.
+        return "Resume AI bulk operation failed. Please try again.";
     }
 
     @FunctionalInterface

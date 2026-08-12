@@ -78,7 +78,9 @@ public class ResumeGeneratorService {
 
         } catch (Exception e) {
             log.error("Error generating resume for user {}", username, e);
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "PDF_GENERATION_FAILED", "Failed to generate PDF: " + e.getMessage());
+            // The cause (LaTeX output, file system paths) belongs in the log above, not in the response.
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "PDF_GENERATION_FAILED",
+                    "We couldn't generate the PDF. Please try again in a few moments.");
         } finally {
             if (tempDir != null) {
                 try (Stream<Path> walk = Files.walk(tempDir)) {

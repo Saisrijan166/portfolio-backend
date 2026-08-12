@@ -2,11 +2,13 @@ package com.srijan.portfolio.security.oauth;
 
 import com.srijan.portfolio.dto.AuthResponse;
 import com.srijan.portfolio.entity.User;
+import com.srijan.portfolio.exception.UserFacingErrors;
 import com.srijan.portfolio.service.AuthService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.core.Authentication;
@@ -20,6 +22,7 @@ import java.util.Base64;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
@@ -68,11 +71,13 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         return "OAuth";
     }
 
+    /** Same rule as the failure handler: classify, never echo the raw exception text. */
     private String resolveErrorMessage(Exception exception) {
-        String message = exception.getMessage();
-        return message == null || message.isBlank()
-                ? "OAuth authentication failed"
-                : message;
+        log.warn("OAuth sign-in could not be completed", exception);
+        UserFacingErrors.SafeError safeError = UserFacingErrors.resolve(exception);
+        return "INTERNAL_SERVER_ERROR".equals(safeError.code())
+                ? "We couldn't complete sign-in. Please try again."
+                : safeError.message();
     }
 
     private void writeOAuthCompletionPage(HttpServletResponse response, AuthResponse authResponse) throws IOException {

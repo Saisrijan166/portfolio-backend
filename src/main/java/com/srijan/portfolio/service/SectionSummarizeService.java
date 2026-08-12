@@ -1,9 +1,11 @@
 package com.srijan.portfolio.service;
 
+import com.srijan.portfolio.exception.ApiException;
 import com.srijan.portfolio.service.ai.SummarizeGroqClient;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,12 +45,17 @@ public class SectionSummarizeService {
             }
             
             return generateAndCacheSummary(normalizedSectionType, sanitizedContent, cacheHash);
+        } catch (ApiException apiException) {
+            throw apiException;
         } catch (Exception e) {
-            String msg = e.getMessage() + " ||| " + e.getClass().getName();
-            if (e.getCause() != null) {
-                msg += " ||| Caused by: " + e.getCause().getMessage() + " " + e.getCause().getClass().getName();
-            }
-            throw new RuntimeException(msg, e);
+            // The exception type and cause chain go to the log; the caller gets a message that
+            // means something to a person.
+            log.error("Section summarize failed sectionType={}", sectionType, e);
+            throw new ApiException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "SUMMARY_FAILED",
+                    "We couldn't generate that summary right now. Please try again in a few moments."
+            );
         }
     }
 

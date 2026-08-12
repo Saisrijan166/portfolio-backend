@@ -63,6 +63,10 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // The container's error dispatch is filtered like any other request. Without
+                        // this, an error raised for an anonymous caller is answered with 403 instead
+                        // of the real status.
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/users/count", "/api/users/health").permitAll()
                         .requestMatchers("/api/auth/logout-all").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()

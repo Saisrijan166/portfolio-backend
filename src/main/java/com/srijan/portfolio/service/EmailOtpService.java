@@ -190,7 +190,7 @@ public class EmailOtpService {
             throw new ApiException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "OTP_DELIVERY_FAILED",
-                    "Unable to send OTP email right now. Please verify your SMTP settings and try again."
+                    "We couldn't send your verification code right now. Please try again in a few moments."
             );
         }
     }

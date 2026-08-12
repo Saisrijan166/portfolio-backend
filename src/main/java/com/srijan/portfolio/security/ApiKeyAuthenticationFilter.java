@@ -1,6 +1,7 @@
 package com.srijan.portfolio.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.srijan.portfolio.util.ApiResponses;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,13 +10,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.Map;
 
 @Slf4j
 @Component
@@ -39,8 +40,13 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
             if (apiKey == null || configuredApiKey == null || !MessageDigest.isEqual(apiKey.getBytes(StandardCharsets.UTF_8), configuredApiKey.getBytes(StandardCharsets.UTF_8))) {
                 log.warn("Unauthorized invocation of cron endpoint: {}", path);
                 response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                response.setContentType("application/json");
-                objectMapper.writeValue(response.getWriter(), Map.of("error", "Unauthorized access to cron endpoint"));
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                // Same envelope as every other error response, so callers parse one shape.
+                objectMapper.writeValue(response.getWriter(), ApiResponses.error(
+                        "UNAUTHORIZED",
+                        "Authentication is required to access this resource"
+                ));
                 return;
             }
         }
