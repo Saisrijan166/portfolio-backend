@@ -30,6 +30,9 @@ public class ResumeParseService {
 
     private static final long DEFAULT_MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
+    /** Marker set by {@link InternalResumeParser}; see the cache handling in parseResume. */
+    private static final String INTERNAL_PROVIDER = "internal";
+
     private final ResumeTextExtractor textExtractor;
     private final InternalResumeParser internalParser;
     private final AiProviderConfig config;
@@ -96,8 +99,14 @@ public class ResumeParseService {
         String extractedText = textExtractor.extractText(fileBytes, normalizedType);
         String resumeHash = resumeAiCacheService.sha256(extractedText);
 
+        // A cached internal-parser result is treated as a miss. That entry was only ever written
+        // because every AI provider happened to be failing at the time, and because the cache key
+        // is the hash of the resume text it would otherwise pin this resume to the degraded result
+        // permanently — re-uploading the same file could never recover. Ignoring it here also
+        // retires entries already written by the previous behaviour, with no manual cleanup.
         ResumeParseResponseDto cached = resumeAiCacheService.read("resume-parse", resumeHash, ResumeParseResponseDto.class)
                 .map(resumeValidator::clean)
+                .filter(entry -> !INTERNAL_PROVIDER.equalsIgnoreCase(entry.getProvider()))
                 .orElse(null);
         if (cached != null) {
             log.info("resume.parse.cache_hit hash={}", resumeHash);
@@ -128,9 +137,11 @@ public class ResumeParseService {
                     "Could not extract text from the file. Please try a different file format.");
         }
 
-        ResumeParseResponseDto fallback = resumeValidator.clean(internalParser.parse(extractedText));
-        resumeAiCacheService.write("resume-parse", resumeHash, fallback);
-        return fallback;
+        // Deliberately not cached. The internal parser is a degradation, not an answer, and the
+        // provider outage that caused it is usually transient. Caching it would turn a few minutes
+        // of provider downtime into a permanently worse result for this resume; leaving it uncached
+        // means the next upload retries the providers and caches a real extraction instead.
+        return resumeValidator.clean(internalParser.parse(extractedText));
     }
 
     public ResumeParseResponseDto regenerateSections(ResumeRegenerateRequestDto request) {
