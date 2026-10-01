@@ -170,15 +170,20 @@ public class GroqAiProvider implements AiProvider {
 
         return """
                 {
-                  "model": "llama-3.3-70b-versatile",
+                  "model": %s,
                   "messages": [
                     {"role": "system", "content": %s},
                     {"role": "user", "content": %s}
                   ],
                   "temperature": 0.1,
-                  "max_tokens": 4096%s
+                  "max_tokens": %d%s
                 }
-                """.formatted(escapedSystem, escapedText, responseFormat);
+                """.formatted(
+                        objectMapper.writeValueAsString(config.getGroqModel()),
+                        escapedSystem,
+                        escapedText,
+                        config.getGroqMaxTokens(),
+                        responseFormat);
     }
 
     private ResumeParseResponseDto parseGroqResponse(String responseBody) throws IOException {

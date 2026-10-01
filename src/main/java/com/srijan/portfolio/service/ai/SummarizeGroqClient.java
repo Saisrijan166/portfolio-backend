@@ -75,15 +75,18 @@ public class SummarizeGroqClient {
 
         return """
                 {
-                  "model": "llama-3.3-70b-versatile",
+                  "model": %s,
                   "messages": [
                     {"role": "system", "content": %s},
                     {"role": "user", "content": %s}
                   ],
                   "temperature": 0.3,
-                  "max_tokens": 1024
+                  "max_tokens": 2048
                 }
-                """.formatted(escapedSystem, escapedText);
+                """.formatted(
+                        objectMapper.writeValueAsString(config.getGroqModel()),
+                        escapedSystem,
+                        escapedText);
     }
 
     private String stripMarkdownCodeFence(String value) {

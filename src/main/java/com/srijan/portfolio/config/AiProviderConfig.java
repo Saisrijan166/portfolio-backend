@@ -15,6 +15,24 @@ public class AiProviderConfig {
     @Value("${GROQ_SUMMARIZE_API_KEY:${GROQ_API_KEY:}}")
     private String groqApiKey;
 
+    /**
+     * Model identifiers are configuration, not constants. Providers retire model names on their own
+     * schedule (a retired name answers 404), and when that happens the fix must be an environment
+     * change rather than a code change and redeploy.
+     */
+    @Value("${GEMINI_MODEL:gemini-flash-latest}")
+    private String geminiModel;
+
+    @Value("${GROQ_MODEL:openai/gpt-oss-120b}")
+    private String groqModel;
+
+    /**
+     * Completion budget for Groq. Reasoning-style models spend part of this budget before emitting
+     * any content, so a resume-sized JSON response needs materially more than a plain chat reply.
+     */
+    @Value("${GROQ_MAX_TOKENS:8192}")
+    private int groqMaxTokens;
+
     @Value("${AI_TIMEOUT_MS:60000}")
     private int timeoutMs;
 
@@ -52,6 +70,18 @@ public class AiProviderConfig {
     /** Used by AI providers to authenticate with external APIs */
     public String getGroqApiKey() {
         return groqApiKey;
+    }
+
+    public String getGeminiModel() {
+        return geminiModel;
+    }
+
+    public String getGroqModel() {
+        return groqModel;
+    }
+
+    public int getGroqMaxTokens() {
+        return Math.max(256, groqMaxTokens);
     }
 
     public int getTimeoutMs() {

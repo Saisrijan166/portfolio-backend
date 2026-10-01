@@ -1,7 +1,9 @@
 package com.srijan.portfolio.service.ai;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.srijan.portfolio.config.AiProviderConfig;
 import com.srijan.portfolio.dto.ResumeParseResponseDto;
 import okhttp3.*;
@@ -21,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 public class GeminiAiProvider implements AiProvider {
 
   private static final Logger log = LoggerFactory.getLogger(GeminiAiProvider.class);
-  private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+  private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
 
   private final AiProviderConfig config;
   private final ObjectMapper objectMapper;
@@ -44,6 +46,14 @@ public class GeminiAiProvider implements AiProvider {
     return "gemini";
   }
 
+  /**
+   * The model name is part of the path, so a retired model answers 404 rather than failing at the
+   * body. Keeping it in configuration means that is recoverable without a redeploy.
+   */
+  private String endpoint() {
+    return GEMINI_BASE_URL + config.getGeminiModel() + ":generateContent?key=" + config.getGeminiApiKey();
+  }
+
   @Override
   public boolean isAvailable() {
     return config.isGeminiAvailable();
@@ -58,7 +68,7 @@ public class GeminiAiProvider implements AiProvider {
     String requestJson = buildGeminiRequest(base64Data, mimeType, resumePromptFactory.buildResumeExtractionPrompt());
 
     Request request = new Request.Builder()
-        .url(GEMINI_URL + "?key=" + config.getGeminiApiKey())
+        .url(endpoint())
         .post(RequestBody.create(requestJson, MediaType.parse("application/json")))
         .build();
 
@@ -106,7 +116,7 @@ public class GeminiAiProvider implements AiProvider {
     );
 
     Request request = new Request.Builder()
-        .url(GEMINI_URL + "?key=" + config.getGeminiApiKey())
+        .url(endpoint())
         .post(RequestBody.create(requestJson, MediaType.parse("application/json")))
         .build();
 
@@ -128,28 +138,32 @@ public class GeminiAiProvider implements AiProvider {
     }
   }
 
-  private String buildGeminiRequest(String base64Data, String mimeType, String prompt) {
-    return """
-        {
-          "contents": [{
-            "parts": [
-              {
-                "inline_data": {
-                  "mime_type": "%s",
-                  "data": "%s"
-                }
-              },
-              {
-                "text": "%s"
-              }
-            ]
-          }],
-          "generationConfig": {
-            "temperature": 0.1,
-            "responseMimeType": "application/json"
-          }
-        }
-        """.formatted(mimeType, base64Data, prompt);
+  /**
+   * Built through Jackson rather than string interpolation. The extraction prompt is a multi-line
+   * block containing the literal JSON schema, so interpolating it into a quoted field produced a
+   * body that was not valid JSON and the API rejected every request with HTTP 400.
+   */
+  private String buildGeminiRequest(String base64Data, String mimeType, String prompt)
+      throws JsonProcessingException {
+    ObjectNode root = objectMapper.createObjectNode();
+
+    ObjectNode parts0 = objectMapper.createObjectNode();
+    ObjectNode inlineData = parts0.putObject("inline_data");
+    inlineData.put("mime_type", mimeType);
+    inlineData.put("data", base64Data);
+
+    ObjectNode parts1 = objectMapper.createObjectNode();
+    parts1.put("text", prompt);
+
+    ObjectNode content = objectMapper.createObjectNode();
+    content.putArray("parts").add(parts0).add(parts1);
+    root.putArray("contents").add(content);
+
+    ObjectNode generationConfig = root.putObject("generationConfig");
+    generationConfig.put("temperature", 0.1);
+    generationConfig.put("responseMimeType", "application/json");
+
+    return objectMapper.writeValueAsString(root);
   }
 
   private ResumeParseResponseDto parseGeminiResponse(String responseBody) throws IOException {
