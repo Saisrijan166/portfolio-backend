@@ -20,7 +20,12 @@ RUN ./mvnw clean package -DskipTests
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
-# Install texlive for pdflatex (resume PDF generation)
+# Install texlive for pdflatex (resume PDF generation).
+# Icons come from fontawesome5, which ships in texlive-fonts-extra. There is deliberately no
+# build-time download here: a previous step fetched the simpleicons package from
+# mirrors.ctan.org, which 307-redirects to a randomly chosen mirror, so the build broke
+# whenever it landed on one with an untrusted certificate (wget exit 5). That package was
+# only ever \usepackage'd and never used, so it was removed rather than made resilient.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-latex-base \
     texlive-latex-extra \
@@ -28,16 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-fonts-recommended \
     texlive-fonts-extra \
     texlive-font-utils \
-    wget unzip \
     && rm -rf /var/lib/apt/lists/*
-
-# Install simpleicons LaTeX package from CTAN (not available in Ubuntu apt repos)
-RUN mkdir -p /usr/local/share/texmf/tex/latex/simpleicons && \
-    wget -q -O /tmp/simpleicons.zip https://mirrors.ctan.org/fonts/simpleicons.zip && \
-    unzip -o /tmp/simpleicons.zip -d /tmp/simpleicons && \
-    cp -r /tmp/simpleicons/simpleicons/* /usr/local/share/texmf/tex/latex/simpleicons/ && \
-    texhash && \
-    rm -rf /tmp/simpleicons /tmp/simpleicons.zip
 
 # Expose the application port
 EXPOSE 8080

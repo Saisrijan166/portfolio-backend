@@ -110,7 +110,6 @@ public class ResumeGeneratorService {
           .append("\\usepackage{fancyhdr}\n")
           .append("\\usepackage{graphicx}\n")
           .append("\\usepackage{fontawesome5}\n")
-          .append("\\usepackage{simpleicons}\n")
           .append("\\usepackage[table]{xcolor}\n")
           .append("\\usepackage{tikz}\n\n")
           .append("\\pagestyle{fancy}\n")
@@ -421,18 +420,39 @@ public class ResumeGeneratorService {
      * Escapes all LaTeX special characters.
      * Order matters — backslash must be handled first.
      */
+    /**
+     * Escapes user text for LaTeX in a single pass over the input.
+     *
+     * <p>A chain of {@code replace} calls cannot do this correctly: the replacement for a
+     * backslash itself contains braces, so the brace replacements that follow escaped those
+     * braces too and {@code C:\Users} came out as {@code C:\textbackslash\{\}Users}. Mapping
+     * each character exactly once removes that ordering hazard entirely.
+     *
+     * <p>{@code <} and {@code >} are escaped because the default font renders a bare {@code <}
+     * as an inverted exclamation mark, so text like {@code <username>} or {@code p<0.05} was
+     * silently mangled in the generated PDF.
+     */
     private String escapeLatex(String s) {
         if (s == null) return "";
-        return s
-                .replace("\\", "\\textbackslash{}")
-                .replace("{",  "\\{")
-                .replace("}",  "\\}")
-                .replace("$",  "\\$")
-                .replace("&",  "\\&")
-                .replace("#",  "\\#")
-                .replace("^",  "\\textasciicircum{}")
-                .replace("_",  "\\_")
-                .replace("~",  "\\textasciitilde{}")
-                .replace("%",  "\\%");
+        StringBuilder out = new StringBuilder(s.length() + 16);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\\' -> out.append("\\textbackslash{}");
+                case '{' -> out.append("\\{");
+                case '}' -> out.append("\\}");
+                case '$' -> out.append("\\$");
+                case '&' -> out.append("\\&");
+                case '#' -> out.append("\\#");
+                case '^' -> out.append("\\textasciicircum{}");
+                case '_' -> out.append("\\_");
+                case '~' -> out.append("\\textasciitilde{}");
+                case '%' -> out.append("\\%");
+                case '<' -> out.append("\\textless{}");
+                case '>' -> out.append("\\textgreater{}");
+                default -> out.append(c);
+            }
+        }
+        return out.toString();
     }
 }
