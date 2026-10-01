@@ -48,15 +48,18 @@ public class ResumeValidator {
         return resumeLimitEnforcer.enforce(normalized);
     }
 
+    /**
+     * Answers one question only: did the provider return anything usable?
+     *
+     * <p>This deliberately does not require the list fields to be non-null. {@link #clean} runs
+     * immediately after and normalises every null list to an empty one, so rejecting here only
+     * discarded responses that were about to be repaired — and a model that omits
+     * {@code principles} for a resume that has none is behaving correctly, not failing. Treating
+     * that as a provider failure sent good extractions to the fallback chain and ultimately to the
+     * internal parser.
+     */
     public boolean isValid(ResumeParseResponseDto resume) {
-        if (resume == null
-                || resume.getSkills() == null
-                || resume.getEducation() == null
-                || resume.getExperience() == null
-                || resume.getProjects() == null
-                || resume.getCertificationAchievements() == null
-                || resume.getOtherLinks() == null
-                || resume.getPrinciples() == null) {
+        if (resume == null) {
             return false;
         }
 
@@ -64,9 +67,13 @@ public class ResumeValidator {
                 || hasText(resume.getEmail())
                 || hasText(resume.getPhone())
                 || hasText(resume.getHeadline())
-                || !resume.getSkills().isEmpty()
-                || !resume.getExperience().isEmpty()
-                || !resume.getEducation().isEmpty();
+                || hasItems(resume.getSkills())
+                || hasItems(resume.getExperience())
+                || hasItems(resume.getEducation());
+    }
+
+    private boolean hasItems(List<?> values) {
+        return values != null && !values.isEmpty();
     }
 
     private String cleanString(String value) {

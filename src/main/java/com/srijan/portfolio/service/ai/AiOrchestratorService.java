@@ -55,6 +55,9 @@ public class AiOrchestratorService {
             }
 
             for (int attempt = 1; attempt <= config.getMaxRetryAttempts(); attempt++) {
+                if (attempt > 1 && !backoffBeforeRetry(provider, attempt)) {
+                    break;
+                }
                 try {
                     T result = executeWithTimeout(provider, () -> callback.apply(provider));
                     if (result == null || !validator.test(result)) {
@@ -83,6 +86,28 @@ public class AiOrchestratorService {
                 "AI_PROVIDER_FAILURE",
                 "All AI providers failed. Please try again shortly."
         );
+    }
+
+    /**
+     * Waits before re-attempting the same provider, scaled by attempt number.
+     *
+     * @return false if the thread was interrupted while waiting, in which case the caller must stop
+     *         retrying rather than spin through the remaining attempts.
+     */
+    private boolean backoffBeforeRetry(AiProvider provider, int attempt) {
+        long delayMs = config.getRetryBackoffMs() * (attempt - 1);
+        if (delayMs <= 0) {
+            return true;
+        }
+        try {
+            log.debug("ai.provider.backoff provider={} nextAttempt={} delayMs={}",
+                    provider.getName(), attempt, delayMs);
+            Thread.sleep(delayMs);
+            return true;
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
     }
 
     private List<AiProvider> orderProviders() {

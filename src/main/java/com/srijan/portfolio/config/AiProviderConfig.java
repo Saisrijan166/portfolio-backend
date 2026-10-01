@@ -42,6 +42,14 @@ public class AiProviderConfig {
     @Value("${AI_PROVIDER_RETRY_ATTEMPTS:2}")
     private int maxRetryAttempts;
 
+    /**
+     * Pause before re-attempting the same provider. Both providers signal overload by status —
+     * Gemini with 503 and Groq with 429 — and an immediate retry is the one thing guaranteed not
+     * to help. Scaled by attempt number, so the second attempt waits longer than the first.
+     */
+    @Value("${AI_PROVIDER_RETRY_BACKOFF_MS:800}")
+    private long retryBackoffMs;
+
     @Value("${RESUME_JOB_POLL_TIMEOUT_MS:180000}")
     private long jobTimeoutMs;
 
@@ -98,6 +106,10 @@ public class AiProviderConfig {
 
     public int getMaxRetryAttempts() {
         return Math.max(1, maxRetryAttempts);
+    }
+
+    public long getRetryBackoffMs() {
+        return Math.max(0L, retryBackoffMs);
     }
 
     public long getJobTimeoutMs() {
